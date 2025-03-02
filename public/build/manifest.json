@@ -32,6 +32,10 @@
     "file": "assets/hero_bg_00-BcwJUlD1.png",
     "src": "resources/images/hero_bg_00.png"
   },
+  "resources/images/hero_bg_00_animation.mp4": {
+    "file": "assets/hero_bg_00_animation-69OQaM6a.mp4",
+    "src": "resources/images/hero_bg_00_animation.mp4"
+  },
   "resources/images/hero_detail_bottom.png": {
     "file": "assets/hero_detail_bottom-CZub2-wi.png",
     "src": "resources/images/hero_detail_bottom.png"
@@ -69,7 +73,7 @@
     "src": "resources/images/mass_spec_detail_00.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-HQWLXIeZ.js",
+    "file": "assets/app-RqStsREl.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -81,6 +85,7 @@
       "assets/carousel_03-ln_rqzGp.png",
       "assets/hero_bg-pqIAu-jY.png",
       "assets/hero_bg_00-BcwJUlD1.png",
+      "assets/hero_bg_00_animation-69OQaM6a.mp4",
       "assets/hero_detail_bottom-CZub2-wi.png",
       "assets/hero_main_image-6jyvTLi1.png",
       "assets/icon_fb-C0YQ1kwm.png",

@@ -7,6 +7,8 @@ export default defineConfig({
         viteStaticCopy({
             targets: [
                 { src: 'resources/images/logo.png', dest: 'images' },
+                // Add your MP4 file to be copied
+                { src: 'resources/images/hero_bg_00_animation.mp4', dest: 'images' },
             ],
         }),
         laravel({
@@ -24,5 +26,5 @@ export default defineConfig({
             },
         },
     },
-    assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg'],
+    assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg', '**/*.mp4'],
 });
