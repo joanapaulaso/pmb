@@ -1,16 +1,16 @@
-<x-guest-layout>
+<x-app-layout>
     <x-authentication-card>
         <x-slot name="logo">
-            <img class="h-12 w-auto" src="{{ Vite::asset('resources/images/logo.png') }}" alt="Logo">
+            <img class="h-20 w-auto" src="{{ Vite::asset('resources/images/logo.png') }}" alt="Logo">
         </x-slot>
 
         <x-validation-errors class="mb-4" />
 
-        @session('status')
+        @if (session('status'))
             <div class="mb-4 font-medium text-sm text-green-600">
-                {{ $value }}
+                {{ session('status') }}
             </div>
-        @endsession
+        @endif
 
         <form method="POST" action="{{ route('login') }}">
             @csrf
@@ -44,5 +44,14 @@
                 </x-button>
             </div>
         </form>
+
+        <div class="mt-6 text-center">
+            <p class="text-sm text-gray-600">
+                {{ __('Ainda não se registrou?') }}
+                <a href="{{ route('register') }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+                    {{ __('Registre-se!') }}
+                </a>
+            </p>
+        </div>
     </x-authentication-card>
-</x-guest-layout>
+</x-app-layout>

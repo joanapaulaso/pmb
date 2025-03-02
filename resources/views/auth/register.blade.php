@@ -1,132 +1,133 @@
-@extends('layouts.guest')
+<x-guest-layout>
+    <x-authentication-card>
+        <x-slot name="logo">
+            <img class="h-20 w-auto" src="{{ Vite::asset('resources/images/logo.png') }}" alt="Logo">
+        </x-slot>
 
-@section('content')
-    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-md w-full p-8 bg-white rounded-lg shadow-md">
-            <h2 class="text-center text-2xl font-bold text-[#267e90] mb-6">Criar uma Conta</h2>
+        <h2 class="text-center text-2xl font-bold text-[#267e90] mb-6">Criar uma Conta</h2>
 
-            @if (session('message'))
-                <div class="p-4 mb-4 bg-green-100 text-green-700 rounded-lg">
-                    {{ session('message') }}
-                </div>
-            @endif
+        <x-validation-errors class="mb-4" />
 
-            <form method="POST" action="{{ route('register') }}" class="space-y-6">
-                @csrf
+        @if (session('message'))
+            <div class="mb-4 font-medium text-sm text-green-600">
+                {{ session('message') }}
+            </div>
+        @endif
 
+        <form method="POST" action="{{ route('register') }}">
+            @csrf
+
+            <div>
+                <x-label for="full_name" value="{{ __('Nome Completo') }}" />
+                <x-input id="full_name" class="block mt-1 w-full" type="text" name="full_name" :value="old('full_name')" required autofocus />
+            </div>
+
+            <div class="mt-4">
+                <x-label for="email" value="{{ __('Email') }}" />
+                <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required />
+            </div>
+
+            <div class="mt-4">
+                <x-label for="password" value="{{ __('Senha') }}" />
+                <x-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="new-password" />
+            </div>
+
+            <div class="mt-4">
+                <x-label for="password_confirmation" value="{{ __('Confirmar Senha') }}" />
+                <x-input id="password_confirmation" class="block mt-1 w-full" type="password" name="password_confirmation" required autocomplete="new-password" />
+            </div>
+
+            <div class="mt-4">
+                <x-label for="birth_date" value="{{ __('Data de Nascimento') }}" />
+                <x-input id="birth_date" class="block mt-1 w-full" type="date" name="birth_date" :value="old('birth_date')" required />
+            </div>
+
+            <div class="mt-4">
+                <label class="flex items-center">
+                    <x-checkbox id="isInternational" name="isInternational" />
+                    <span class="ms-2 text-sm text-gray-600">{{ __('Não sou do Brasil') }}</span>
+                </label>
+            </div>
+
+            <!-- Campos para brasileiros -->
+            <div id="brazilianFields" class="mt-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Nome Completo</label>
-                    <input type="text" name="full_name" required class="w-full px-4 py-2 border rounded-md">
+                    <x-label for="state" value="{{ __('Estado') }}" />
+                    <x-input id="state" class="block mt-1 w-full" type="text" name="state" :value="old('state')" />
                 </div>
 
+                <div class="mt-4">
+                    <x-label for="municipality" value="{{ __('Município') }}" />
+                    <x-input id="municipality" class="block mt-1 w-full" type="text" name="municipality" :value="old('municipality')" />
+                </div>
+
+                <input type="hidden" name="country_code" value="BR">
+            </div>
+
+            <!-- Campos para estrangeiros -->
+            <div id="internationalFields" class="hidden mt-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" name="email" required class="w-full px-4 py-2 border rounded-md">
+                    <x-label for="country" value="{{ __('País') }}" />
+                    <select name="country_code" id="country" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm block mt-1 w-full"></select>
                 </div>
+            </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Senha</label>
-                    <input type="password" name="password" required class="w-full px-4 py-2 border rounded-md">
-                </div>
+            <!-- Campos de Instituição -->
+            <div id="institutionFields" class="mt-4">
+                <x-label for="institution" value="{{ __('Instituição') }}" />
+                <x-input id="institution" class="block mt-1 w-full" type="text" name="institution" :value="old('institution')" />
+            </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Confirmar Senha</label>
-                    <input type="password" name="password_confirmation" required class="w-full px-4 py-2 border rounded-md">
-                </div>
+            <!-- Checkbox para adicionar nova instituição -->
+            <div class="mt-4">
+                <label class="flex items-center">
+                    <x-checkbox id="newInstitutionCheckbox" />
+                    <span class="ms-2 text-sm text-gray-600">{{ __('Minha instituição não está na lista') }}</span>
+                </label>
+            </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Data de Nascimento</label>
-                    <input type="date" name="birth_date" required class="w-full px-4 py-2 border rounded-md">
-                </div>
+            <!-- Campo para nova instituição -->
+            <div id="newInstitutionField" class="hidden mt-4">
+                <x-label for="new_institution" value="{{ __('Nova Instituição') }}" />
+                <x-input id="new_institution" class="block mt-1 w-full" type="text" name="new_institution" :value="old('new_institution')" />
+            </div>
 
-                <!-- Checkbox para indicar se o usuário é de fora do Brasil -->
-                <div class="mb-4">
-                    <label class="inline-flex items-center">
-                        <input type="checkbox" id="isInternational" name="isInternational" class="form-checkbox">
-                        <span class="ml-2 text-sm">Não sou do Brasil</span>
-                    </label>
-                </div>
+            <!-- Campos de Laboratório -->
+            <div id="laboratoryFields" class="mt-4">
+                <x-label for="laboratory" value="{{ __('Laboratório') }}" />
+                <x-input id="laboratory" class="block mt-1 w-full" type="text" name="laboratory" :value="old('laboratory')" />
+            </div>
 
-                <!-- Campos para brasileiros -->
-                <div id="brazilianFields">
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700">Estado</label>
-                        <input type="text" name="state" class="w-full px-4 py-2 border rounded-md">
-                        <!-- Estado -->
-                    </div>
+            <!-- Checkbox para adicionar novo laboratório -->
+            <div class="mt-4">
+                <label class="flex items-center">
+                    <x-checkbox id="newLaboratoryCheckbox" />
+                    <span class="ms-2 text-sm text-gray-600">{{ __('Meu laboratório não está na lista') }}</span>
+                </label>
+            </div>
 
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700">Município</label>
-                        <input type="text" name="municipality" class="w-full px-4 py-2 border rounded-md">
-                    </div>
+            <!-- Campo para novo laboratório -->
+            <div id="newLaboratoryField" class="hidden mt-4">
+                <x-label for="new_laboratory" value="{{ __('Novo Laboratório') }}" />
+                <x-input id="new_laboratory" class="block mt-1 w-full" type="text" name="new_laboratory" :value="old('new_laboratory')" />
+            </div>
 
-                    <input type="hidden" name="country_code" value="BR"> <!-- Define Brasil automaticamente -->
-                </div>
+            <div class="mt-4">
+                <label class="flex items-center">
+                    <x-checkbox id="lab_coordinator" name="lab_coordinator" />
+                    <span class="ms-2 text-sm text-gray-600">{{ __('Coordenador de Laboratório?') }}</span>
+                </label>
+            </div>
 
-                <!-- Campos para estrangeiros -->
-                <div id="internationalFields" class="hidden">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">País</label>
-                        <select name="country_code" id="country" class="w-full px-4 py-2 border rounded-md"></select>
-                    </div>
-                </div>
+            <div class="flex items-center justify-end mt-4">
+                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}">
+                    {{ __('Já possui uma conta?') }}
+                </a>
 
-                <!-- Campos de Instituição -->
-                <div id="institutionFields" class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Instituição</label>
-                    <input type="text" name="institution" class="w-full px-4 py-2 border rounded-md">
-                    <!-- Instituição que depende do estado -->
-                </div>
-
-                <!-- Checkbox para adicionar nova instituição -->
-                <div class="mb-4">
-                    <label class="inline-flex items-center">
-                        <input type="checkbox" id="newInstitutionCheckbox" class="form-checkbox">
-                        <span class="ml-2 text-sm">Minha instituição não está na lista</span>
-                    </label>
-                </div>
-
-                <!-- Campo para nova instituição -->
-                <div id="newInstitutionField" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700">Nova Instituição</label>
-                    <input type="text" name="new_institution" class="w-full px-4 py-2 border rounded-md">
-                </div>
-
-                <!-- Campos de Laboratório -->
-                <div id="laboratoryFields" class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Laboratório</label>
-                    <input type="text" name="laboratory" class="w-full px-4 py-2 border rounded-md">
-                    <!-- Laboratório que depende da instituição -->
-                </div>
-
-                <!-- Checkbox para adicionar novo laboratório -->
-                <div class="mb-4">
-                    <label class="inline-flex items-center">
-                        <input type="checkbox" id="newLaboratoryCheckbox" class="form-checkbox">
-                        <span class="ml-2 text-sm">Meu laboratório não está na lista</span>
-                    </label>
-                </div>
-
-                <!-- Campo para novo laboratório -->
-                <div id="newLaboratoryField" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700">Novo Laboratório</label>
-                    <input type="text" name="new_laboratory" class="w-full px-4 py-2 border rounded-md">
-                </div>
-
-                <div>
-                    <label class="inline-flex items-center">
-                        <input type="checkbox" name="lab_coordinator" class="form-checkbox">
-                        <span class="ml-2">Coordenador de Laboratório?</span>
-                    </label>
-                </div>
-
-                <div>
-                    <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-md shadow">
-                        Registrar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-@endsection
+                <x-button class="ms-4">
+                    {{ __('Registrar') }}
+                </x-button>
+            </div>
+        </form>
+    </x-authentication-card>
+</x-guest-layout>
