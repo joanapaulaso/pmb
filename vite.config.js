@@ -6,7 +6,7 @@ export default defineConfig({
     plugins: [
         viteStaticCopy({
             targets: [
-                { src: 'resources/images/logo.png', dest: 'images' }, // Ensure logo.png exists
+                { src: 'resources/images/logo.png', dest: 'images' },
             ],
         }),
         laravel({
@@ -20,8 +20,9 @@ export default defineConfig({
         rollupOptions: {
             input: {
                 app: 'resources/js/app.js',
-                appCss: 'resources/css/app.css', // Add CSS as a named entry
+                appCss: 'resources/css/app.css',
             },
         },
     },
+    assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg'],
 });
