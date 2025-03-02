@@ -1,0 +1,324 @@
+<?php
+
+namespace App\Actions\Fortify;
+
+use App\Models\User;
+use App\Models\Profile;
+use App\Models\Institution;
+use App\Models\Laboratory;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Laravel\Fortify\Contracts\CreatesNewUsers;
+
+class CreateNewUser implements CreatesNewUsers
+{
+    public function create(array $input)
+    {
+        \Log::info('Dados recebidos no registro:', $input);
+
+        Validator::make($input, [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'birth_date' => ['nullable', 'date'],
+            'institution_id' => ['nullable', 'exists:institutions,id'],
+            'new_institution' => ['nullable', 'string', 'max:255'],
+            'laboratory_id' => ['nullable', 'exists:laboratories,id'],
+            'new_laboratory' => ['nullable', 'string', 'max:255'],
+            'lab_coordinator' => ['nullable', 'boolean'],
+        ])->validate();
+
+        \Log::info('Validação concluída.');
+
+        // Converter 'on' para true no lab_coordinator
+        $input['lab_coordinator'] = isset($input['lab_coordinator']) ? true : false;
+
+        // Criar nova instituição se necessário
+        if (!empty($input['new_institution'])) {
+            \Log::info('Criando nova instituição.');
+            $institution = Institution::create([
+                'name' => $input['new_institution'],
+                'country_code' => $input['country_code'] ?? 'BR',
+            ]);
+            $input['institution_id'] = $institution->id;
+        }
+
+        \Log::info('Instituição definida: ' . ($input['institution_id'] ?? 'nenhuma'));
+
+        // Criar novo laboratório se necessário
+        if (!empty($input['new_laboratory'])) {
+            \Log::info('Criando novo laboratório.');
+            try {
+                $laboratory = Laboratory::create([
+                    'name' => $input['new_laboratory'],
+                    'institution_id' => $input['institution_id'],
+                ]);
+                $input['laboratory_id'] = $laboratory->id;
+            } catch (\Exception $e) {
+                \Log::error('Erro ao criar laboratório: ' . $e->getMessage());
+            }
+        }
+
+        \Log::info('Laboratório definido: ' . ($input['laboratory_id'] ?? 'nenhum'));
+
+        // Criar usuário
+        \Log::info('Criando usuário.');
+        try {
+            $user = User::create([
+                'name' => $input['name'],
+                'email' => $input['email'],
+                'password' => Hash::make($input['password']),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erro ao criar usuário: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro ao criar usuário'], 500);
+        }
+
+        \Log::info('Usuário criado com ID: ' . $user->id);
+
+        // Criar perfil associado ao usuário
+        try {
+            Profile::create([
+                'user_id' => $user->id,
+                'birth_date' => $input['birth_date'] ?? null,
+                'institution_id' => $input['institution_id'],
+                'laboratory_id' => $input['laboratory_id'] ?? null,
+                'lab_coordinator' => $input['lab_coordinator'],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erro ao criar perfil: ' . $e->getMessage());
+        }
+
+        \Log::info('--- REGISTRO CONCLUÍDO ---');
+
+        return redirect()->route('dashboard')->with('success', 'Usuário registrado com sucesso!');
+
+    }
+
+}
+
+
+<?php
+
+namespace App\Providers;
+
+use App\Actions\Fortify\CreateNewUser;
+use App\Actions\Fortify\ResetUserPassword;
+use App\Actions\Fortify\UpdateUserPassword;
+use App\Actions\Fortify\UpdateUserProfileInformation;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
+use Laravel\Fortify\Fortify;
+
+class FortifyServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        Fortify::createUsersUsing(CreateNewUser::class);
+        Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
+        Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
+        Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
+
+        RateLimiter::for('login', function (Request $request) {
+            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+
+            return Limit::perMinute(5)->by($throttleKey);
+        });
+
+        RateLimiter::for('two-factor', function (Request $request) {
+            return Limit::perMinute(5)->by($request->session()->get('login.id'));
+        });
+    }
+}
+
+
+
+
+@extends('layouts.guest')
+
+@section('content')
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full" x-data="{ isInternational: false }">
+        <div class="flex justify-center mb-6">
+            <div class="shrink-0 flex items-center">
+                <a href="{{ route('dashboard') }}">
+                    <x-application-mark class="block h-9 w-auto" />
+                </a>
+            </div>
+        </div>
+
+        <h2 class="text-center text-2xl font-bold text-[#267e90] mb-6">Criar uma Conta</h2>
+
+        @if (session('message'))
+        <div class="p-4 mb-4 bg-green-100 text-green-700 rounded-lg">
+            {{ session('message') }}
+        </div>
+        @endif
+
+        <form method="POST" action="{{ route('register') }}" class="space-y-6">
+            @csrf
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nome Completo</label>
+                <input type="text" name="name" required class="w-full px-4 py-2 border rounded-md">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" name="email" required class="w-full px-4 py-2 border rounded-md">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Senha</label>
+                <input type="password" name="password" required class="w-full px-4 py-2 border rounded-md">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Confirmar Senha</label>
+                <input type="password" name="password_confirmation" required class="w-full px-4 py-2 border rounded-md">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Data de Nascimento</label>
+                <input type="date" name="birth_date" required class="w-full px-4 py-2 border rounded-md">
+            </div>
+
+            <div class="mb-4">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" x-model="isInternational" class="form-checkbox">
+                    <span class="ml-2">Não sou do Brasil</span>
+                </label>
+            </div>
+
+            <div x-show="isInternational">
+                <label class="block text-sm font-medium text-gray-700">País</label>
+                <select name="country_code" id="country" class="w-full px-4 py-2 border rounded-md"></select>
+            </div>
+
+            <div x-show="!isInternational">
+                <label class="block text-sm font-medium text-gray-700">Estado</label>
+                <select name="state_id" id="state" class="w-full px-4 py-2 border rounded-md"></select>
+            </div>
+
+            <div x-show="!isInternational">
+                <label class="block text-sm font-medium text-gray-700">Município</label>
+                <select name="municipality_id" id="municipality" class="w-full px-4 py-2 border rounded-md"></select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Instituição</label>
+                <select name="institution_id" id="institution" class="w-full px-4 py-2 border rounded-md"></select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nova Instituição (se não estiver listada)</label>
+                <input type="text" name="new_institution" class="w-full px-4 py-2 border rounded-md">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Laboratório</label>
+                <select name="laboratory_id" id="laboratory" class="w-full px-4 py-2 border rounded-md"></select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Novo Laboratório (se não estiver listado)</label>
+                <input type="text" name="new_laboratory" class="w-full px-4 py-2 border rounded-md">
+            </div>
+
+            <div>
+                <label class="inline-flex items-center">
+                    <input type="checkbox" name="lab_coordinator" class="form-checkbox">
+                    <span class="ml-2">Sou coordenador do laboratório</span>
+                </label>
+            </div>
+
+            <div>
+                <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-md shadow">
+                    Registrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Função para carregar países
+    fetch('/get-countries')
+        .then(response => response.json())
+        .then(data => {
+            let select = document.getElementById('country');
+            select.innerHTML = '<option value="">Selecione um país</option>';
+            data.forEach(country => {
+                let option = document.createElement('option');
+                option.value = country.code;
+                option.textContent = country.name;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Erro ao carregar países:', error));
+
+    // Função para carregar estados
+    fetch('/get-states')
+        .then(response => response.json())
+        .then(data => {
+            let select = document.getElementById('state');
+            select.innerHTML = '<option value="">Selecione um estado</option>';
+            data.forEach(state => {
+                let option = document.createElement('option');
+                option.value = state.id;
+                option.textContent = state.name;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Erro ao carregar estados:', error));
+
+    // Evento para carregar municípios ao selecionar um estado
+    document.getElementById('state').addEventListener('change', function () {
+        let state_id = this.value;
+        fetch(`/get-municipalities/${state_id}`)
+            .then(response => response.json())
+            .then(data => {
+                let select = document.getElementById('municipality');
+                select.innerHTML = '<option value="">Selecione um município</option>';
+                data.forEach(municipality => {
+                    let option = document.createElement('option');
+                    option.value = municipality.id;
+                    option.textContent = municipality.name;
+                    select.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Erro ao carregar municípios:', error));
+
+        // Carregar instituições relacionadas ao estado selecionado
+        fetch(`/get-institutions/${state_id}`)
+            .then(response => response.json())
+            .then(data => {
+                let select = document.getElementById('institution');
+                select.innerHTML = '<option value="">Selecione uma instituição</option>';
+                data.forEach(institution => {
+                    let option = document.createElement('option');
+                    option.value = institution.id;
+                    option.textContent = institution.name;
+                    select.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Erro ao carregar instituições:', error));
+    });
+});
+</script>
+
+@endsection

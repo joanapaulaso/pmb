@@ -1,0 +1,32 @@
+sail php artisan config:clear
+sail php artisan cache:clear
+sail php artisan view:clear
+sail php artisan route:clear
+sail php artisan optimize:clear
+sail php artisan route:list | grep register
+sail php artisan import:data
+
+$dados = [
+    'name' => 'Joana Paula',
+    'email' => 'joanapaula@example.com',
+    'password' => '321321321',
+    'password_confirmation' => '321321321',
+    'birth_date' => '1986-03-02',
+    'institution_id' => 191,
+];
+
+
+
+$dados = [
+    'full_name' => 'Teste Usuário',
+    'email' => 'teste@exemplo2.com',
+    'password' => '321321321',
+    'password_confirmation' => '321321321',
+    'birth_date' => '1990-01-01',
+    'new_institution' => 'Universidade Teste 2',
+    'new_laboratory' => 'Laboratório Teste',
+    'state_id' => 1,
+    'municipality_id' => 10,
+    'country_code' => 'BR',
+    'lab_coordinator' => true,
+];
