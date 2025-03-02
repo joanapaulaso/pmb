@@ -4,6 +4,10 @@
     "src": "resources/css/app.css",
     "isEntry": true
   },
+  "resources/images/logo.png": {
+    "file": "assets/logo-CrL0EguI.png",
+    "src": "resources/images/logo.png"
+  },
   "resources/js/app.js": {
     "file": "assets/app-BW44DVhI.js",
     "name": "app",
