@@ -4,11 +4,7 @@
         <div class="flex justify-between h-16">
             <div class="flex">
                 <!-- Logo -->
-                <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}">
-                        <x-application-mark class="block h-6 w-auto" />
-                    </a>
-                </div>
+                <img class="m-2 h-14 w-auto" src="{{ Vite::asset('resources/images/logo.png') }}" alt="Logo">
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
@@ -23,7 +19,7 @@
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
                 <!-- Teams Dropdown -->
-                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures())
+                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures() && Auth::check())
                     <div class="ms-3 relative">
                         @if(Auth::user()->allTeams()->count() > 0)
                             <x-dropdown align="right" width="60">
@@ -85,6 +81,7 @@
                 @endif
 
                 <!-- Settings Dropdown -->
+                @if (Auth::check())
                 <div class="ms-3 relative">
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
@@ -135,6 +132,16 @@
                         </x-slot>
                     </x-dropdown>
                 </div>
+                @else
+                <div class="ms-3 relative">
+                    <a href="{{ route('login') }}" class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150">
+                        {{ __('Log in') }}
+                    </a>
+                    <a href="{{ route('register') }}" class="ms-2 inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        {{ __('Register') }}
+                    </a>
+                </div>
+                @endif
             </div>
 
             <!-- Hamburger -->
@@ -161,6 +168,7 @@
         </div>
 
         <!-- Responsive Settings Options -->
+        @if (Auth::check())
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="flex items-center px-4">
                 @if (Laravel\Jetstream\Jetstream::managesProfilePhotos())
@@ -241,5 +249,17 @@
                 @endif
             </div>
         </div>
+        @else
+        <div class="pt-4 pb-1 border-t border-gray-200">
+            <div class="mt-3 space-y-1">
+                <x-responsive-nav-link href="{{ route('login') }}">
+                    {{ __('Log in') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link href="{{ route('register') }}">
+                    {{ __('Register') }}
+                </x-responsive-nav-link>
+            </div>
+        </div>
+        @endif
     </div>
 </nav>

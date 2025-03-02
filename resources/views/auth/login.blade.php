@@ -1,4 +1,6 @@
-<x-app-layout>
+@extends('layouts.guest')
+
+@section('content')
     <x-authentication-card>
         <x-slot name="logo">
             <img class="h-20 w-auto" src="{{ Vite::asset('resources/images/logo.png') }}" alt="Logo">
@@ -54,4 +56,4 @@
             </p>
         </div>
     </x-authentication-card>
-</x-app-layout>
+@endsection
