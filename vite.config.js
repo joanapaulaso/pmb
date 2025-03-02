@@ -1,12 +1,12 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
-import { viteStaticCopy } from 'vite-plugin-static-copy'; // Use named import
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
     plugins: [
         viteStaticCopy({
             targets: [
-                { src: 'resources/images/*', dest: 'images' }, // Copies all images to public/images
+                { src: 'resources/images/logo.png', dest: 'images' }, // Specific file
             ],
         }),
         laravel({
