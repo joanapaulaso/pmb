@@ -76,10 +76,14 @@
 
         {{-- Hero --}}
         <div class="hero-section bg-white relative overflow-hidden min-h-screen">
-            <video class="absolute inset-0 w-full h-full object-cover" autoplay loop muted playsinline>
-                <source src="{{ Vite::asset('resources/images/hero_bg_00_animation.mp4') }}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
+            <div>
+                <video class="absolute inset-0 w-full h-full object-cover" autoplay loop muted playsinline>
+                    <source src="{{ Vite::asset('resources/images/hero_bg_00_animation.mp4') }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <!-- White gradient overlay (top to middle) -->
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent opacity-75 to-[#9333ea]"></div>
+            </div>
             <div class="relative z-10 max-w-7xl mx-auto h-full flex flex-col justify-center py-16 px-4 sm:py-24 sm:px-6 lg:px-8">
                 <div class="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-center">
                     <div>
@@ -94,8 +98,8 @@
                         </a>
                     </div>
                     <div class="mt-10 lg:mt-0 lg:col-start-2 lg:relative">
-                        <div class="relative mx-auto w-full lg:max-w-md">
-                            <img class="w-full rounded-full shadow-lg" src="{{ Vite::asset('resources/images/hero_main_image.png') }}" alt="Hero Image">
+                        <div class="relative mx-auto w-full lg:max-w-md aspect-square">
+                            <img class="w-full h-full object-cover rounded-full shadow-lg" src="{{ Vite::asset('resources/images/hero_main_image.png') }}" alt="Hero Image">
                         </div>
                     </div>
                 </div>

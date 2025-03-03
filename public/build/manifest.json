@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/appCss-C_Yqr71f.css",
+    "file": "assets/appCss-CDcOAbTc.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -41,8 +41,16 @@
     "src": "resources/images/hero_detail_bottom.png"
   },
   "resources/images/hero_main_image.png": {
-    "file": "assets/hero_main_image-6jyvTLi1.png",
+    "file": "assets/hero_main_image-Bt-xLdPt.png",
     "src": "resources/images/hero_main_image.png"
+  },
+  "resources/images/hero_main_image_2.png": {
+    "file": "assets/hero_main_image_2-6jyvTLi1.png",
+    "src": "resources/images/hero_main_image_2.png"
+  },
+  "resources/images/hero_main_image_3.png": {
+    "file": "assets/hero_main_image_3-NSpXxe1c.png",
+    "src": "resources/images/hero_main_image_3.png"
   },
   "resources/images/icon_fb.png": {
     "file": "assets/icon_fb-C0YQ1kwm.png",
@@ -73,7 +81,7 @@
     "src": "resources/images/mass_spec_detail_00.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-DNAIX2ba.js",
+    "file": "assets/app-4mNzUsqY.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -87,7 +95,9 @@
       "assets/hero_bg_00-BcwJUlD1.png",
       "assets/hero_bg_00_animation-69OQaM6a.mp4",
       "assets/hero_detail_bottom-CZub2-wi.png",
-      "assets/hero_main_image-6jyvTLi1.png",
+      "assets/hero_main_image-Bt-xLdPt.png",
+      "assets/hero_main_image_2-6jyvTLi1.png",
+      "assets/hero_main_image_3-NSpXxe1c.png",
       "assets/icon_fb-C0YQ1kwm.png",
       "assets/icon_insta-BMQcz2Sb.png",
       "assets/icon_linkedin-C7S9p41J.png",
