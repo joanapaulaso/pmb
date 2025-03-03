@@ -3,11 +3,12 @@ import laravel from 'laravel-vite-plugin';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
+    // Definindo base para produção
+    base: process.env.NODE_ENV === 'production' ? './' : '/',
     plugins: [
         viteStaticCopy({
             targets: [
                 { src: 'resources/images/logo.png', dest: 'images' },
-                // Add your MP4 file to be copied
                 { src: 'resources/images/hero_bg_00_animation.mp4', dest: 'images' },
             ],
         }),
