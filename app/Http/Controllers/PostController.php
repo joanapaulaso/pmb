@@ -18,7 +18,6 @@ class PostController extends Controller
         $this->linkPreviewService = $linkPreviewService;
     }
 
-    // In app/Http/Controllers/PostController.php
     public function index(Request $request)
     {
         $query = Post::with(['user', 'replies.user'])
@@ -31,8 +30,14 @@ class PostController extends Controller
             $selectedTags = explode(',', $selectedTags);
         }
 
+        // Limit tag selection to 3
+        $selectedTags = array_slice($selectedTags, 0, 3);
+
         if (!empty($selectedTags) && !in_array('all', $selectedTags)) {
-            $query->whereIn('tag', $selectedTags);
+            $query->where(function ($q) use ($selectedTags) {
+                $q->whereIn('tag', $selectedTags)
+                    ->orWhereJsonContains('additional_tags', $selectedTags);
+            });
         }
 
         $posts = $query->get();
@@ -46,6 +51,8 @@ class PostController extends Controller
         $validated = $request->validate([
             'content' => 'required|max:280',
             'tag' => 'required|in:general,question,job,promotion,idea,collaboration,news,paper',
+            'additional_tags' => 'sometimes|array|max:2',
+            'additional_tags.*' => 'in:general,question,job,promotion,idea,collaboration,news,paper'
         ]);
 
         $metadata = [];
@@ -53,7 +60,13 @@ class PostController extends Controller
             $metadata = $this->linkPreviewService->getPreview($match[0]);
         }
 
-        $post = $request->user()->posts()->create(array_merge($validated, ['metadata' => $metadata]));
+        // Create the post with additional tags
+        $post = $request->user()->posts()->create([
+            'content' => $validated['content'],
+            'tag' => $validated['tag'],
+            'additional_tags' => $request->input('additional_tags', []),
+            'metadata' => $metadata
+        ]);
 
         return redirect()->route('dashboard');
     }

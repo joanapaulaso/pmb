@@ -1,31 +1,44 @@
 <?php
 
-// app/Models/Post.php
-
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Post extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'user_id', 'parent_id', 'content', 'metadata', 'tag',
+        'content',
+        'tag',
+        'additional_tags',
+        'metadata',
+        'parent_id',
+        'user_id'
     ];
 
     protected $casts = [
-        'metadata' => 'array',
+        'additional_tags' => 'array',
+        'metadata' => 'array'
     ];
 
+    // Accessor to get all tags
+    public function getAllTagsAttribute()
+    {
+        $tags = [$this->tag];
+        if (!empty($this->additional_tags)) {
+            $tags = array_merge($tags, $this->additional_tags);
+        }
+        return $tags;
+    }
+
+    // Relationship with user
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
+    // Relationship for replies
     public function replies()
     {
-        return $this->hasMany(Post::class, 'parent_id');
+        return $this->hasMany(Post::class, 'parent_id')->latest();
     }
 }

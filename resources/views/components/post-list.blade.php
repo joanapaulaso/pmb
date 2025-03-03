@@ -2,6 +2,8 @@
 @props(['posts', 'tags', 'selectedTags'])
 
 @php
+    $posts = $posts->sortByDesc('created_at');
+
     $tagColors = [
         'all' => 'bg-gray-200 text-gray-700',
         'general' => 'bg-gray-200 text-gray-700',
@@ -16,7 +18,7 @@
 @endphp
 
 <div>
-    <form action="{{ route('dashboard') }}" method="GET" class="mb-4">
+    <form action="{{ route('dashboard') }}" method="GET" class="mb-4" x-data="tagFilter()">
         <div class="flex flex-wrap gap-2">
             @foreach($tags as $tag)
                 <button type="button"
@@ -24,12 +26,12 @@
                         {{ in_array($tag, $selectedTags) ? 'bg-gray-800 text-white' : $tagColors[$tag] }}"
                         data-tag="{{ $tag }}"
                         data-original-styles="{{ $tagColors[$tag] }}"
-                        onclick="toggleTag(this, '{{ $tag }}')">
+                        @click="toggleTag('{{ $tag }}')">
                     #{{ $tag }}
                 </button>
             @endforeach
         </div>
-        <input type="hidden" name="tags" id="selected-tags" value="{{ implode(',', $selectedTags) }}">
+        <input type="hidden" name="tags" id="selected-tags" x-model="selectedTagsString">
         <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
             Filter Posts
         </button>
@@ -42,9 +44,15 @@
                     {{ $post->user->name }}
                 </a>
             </p>
-            <span class="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">
-                #{{ $post->tag }}
-            </span>
+
+            <!-- Display all tags -->
+            <div class="flex flex-wrap gap-2 mb-2">
+                @foreach($post->all_tags as $tag)
+                    <span class="inline-block {{ $tagColors[$tag] ?? 'bg-gray-200 text-gray-700' }} rounded-full px-3 py-1 text-xs font-semibold">
+                        #{{ $tag }}
+                    </span>
+                @endforeach
+            </div>
             <p>{{ $post->content }}</p>
             @if (!empty($post->metadata))
                 <div class="mt-4 border rounded flex overflow-hidden">
@@ -228,6 +236,28 @@ function toggleTag(element, tag) {
     }
 
     document.getElementById('selected-tags').value = selectedTags.join(',');
+}
+
+function tagFilter() {
+    return {
+        selectedTags: [],
+        init() {
+            // Initialize with existing tags from URL
+            const initialTags = document.getElementById('selected-tags').value.split(',').filter(tag => tag);
+            this.selectedTags = initialTags;
+        },
+        toggleTag(tag) {
+            if (this.selectedTags.includes(tag)) {
+                this.selectedTags = this.selectedTags.filter(t => t !== tag);
+            } else if (this.selectedTags.length < 3) {
+                this.selectedTags.push(tag);
+            }
+        },
+        get selectedTagsString() {
+            // Limit to 3 tags
+            return this.selectedTags.slice(0, 3).join(',');
+        }
+    }
 }
 
 document.addEventListener('DOMContentLoaded', (event) => {
