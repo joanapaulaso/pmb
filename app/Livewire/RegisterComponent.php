@@ -10,6 +10,7 @@ use App\Models\State;
 use App\Models\Municipality;
 use App\Models\Institution;
 use App\Models\Laboratory;
+use App\Models\Team; // Adicionando o modelo Team
 use Illuminate\Support\Facades\Log;
 
 class RegisterComponent extends Component
@@ -153,7 +154,6 @@ class RegisterComponent extends Component
         $this->dispatch('dependencyChanged');
     }
 
-    // This method handles when options are selected from search-select components
     public function optionSelected($data)
     {
         \Log::info("Option selected in parent: " . json_encode($data));
@@ -239,6 +239,51 @@ class RegisterComponent extends Component
 
             $createNewUser = new CreateNewUser();
             $user = $createNewUser->create($data);
+
+            // Criar ou associar o laboratório como um Team
+            $team = null;
+            if ($this->showNewLaboratory && $this->new_laboratory) {
+                // Criar um novo laboratório e associá-lo como Team
+                $laboratory = Laboratory::create([
+                    'name' => $this->new_laboratory,
+                    'institution_id' => $this->showNewInstitution ? null : $this->institution_id,
+                ]);
+
+                $team = Team::create([
+                    'user_id' => $this->lab_coordinator ? $user->id : null, // Se for coordenador, o usuário é o dono
+                    'name' => $this->new_laboratory,
+                    'personal_team' => false,
+                ]);
+
+                // Vincular o laboratório ao Team (opcional, dependendo da sua estrutura)
+                $laboratory->team_id = $team->id;
+                $laboratory->save();
+            } elseif ($this->laboratory_id) {
+                // Verificar se o laboratório já tem um Team associado
+                $laboratory = Laboratory::find($this->laboratory_id);
+                $team = Team::where('name', $laboratory->name)->first();
+
+                if (!$team) {
+                    // Criar um novo Team para o laboratório existente
+                    $team = Team::create([
+                        'user_id' => $this->lab_coordinator ? $user->id : null, // Se for coordenador, o usuário é o dono
+                        'name' => $laboratory->name,
+                        'personal_team' => false,
+                    ]);
+                    $laboratory->team_id = $team->id;
+                    $laboratory->save();
+                }
+            }
+
+            // Associar o usuário ao Team
+            if ($team) {
+                $user->teams()->attach($team->id); // Adiciona o usuário ao time
+
+                // Se o usuário não for o coordenador e o time não tiver dono, atribuir o primeiro usuário como dono
+                if (!$this->lab_coordinator && !$team->user_id) {
+                    $team->update(['user_id' => $user->id]);
+                }
+            }
 
             Auth::login($user);
 
