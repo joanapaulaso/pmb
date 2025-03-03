@@ -1,373 +1,227 @@
-<!-- register.blade.php -->
-@extends('layouts.guest')
+{{-- REFACTORED CODE --}}
+@props(['tags'])
 
-@section('content')
-    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-md w-full p-8 bg-white rounded-lg shadow-md">
-            <h2 class="text-center text-2xl font-bold text-[#267e90] mb-6">Criar uma Conta</h2>
+@php
+    $tagColors = [
+        'general' => 'bg-gray-200 text-gray-700',
+        'question' => 'bg-red-200 text-red-700',
+        'job' => 'bg-blue-200 text-blue-700',
+        'promotion' => 'bg-green-200 text-green-700',
+        'idea' => 'bg-pink-200 text-pink-700',
+        'collaboration' => 'bg-purple-200 text-purple-700',
+        'paper' => 'bg-amber-200 text-amber-700',
+        'news' => 'bg-cyan-200 text-cyan-700',
+    ];
+@endphp
 
-            @if (session('message'))
-                <div class="p-4 mb-4 bg-green-100 text-green-700 rounded-lg">
-                    {{ session('message') }}
-                </div>
-            @endif
+<div x-data="tagSelector()">
+    @if (isset($post))
+        <form action="{{ route('posts.reply', $post) }}" method="POST">
+            @csrf
+            <textarea name="content" rows="2" class="w-full border border-gray-200 rounded-lg p-3 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200" placeholder="Reply to this post"></textarea>
+            <button type="submit" class="mt-3 px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm shadow-sm transition-all duration-200">Reply</button>
+        </form>
+    @else
+        <form action="{{ route('posts.store') }}" method="POST">
+            @csrf
+            <textarea
+                name="content"
+                rows="3"
+                class="w-full border border-gray-200 rounded-lg p-3 mb-3 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200"
+                placeholder="Write your post"
+            ></textarea>
 
-            <form method="POST" action="{{ route('register') }}" class="space-y-6">
-                @csrf
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Nome Completo</label>
-                    <input type="text" name="full_name" required class="w-full px-4 py-2 border rounded-md">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Email</label>
-                    <input type="email" name="email" required class="w-full px-4 py-2 border rounded-md">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Senha</label>
-                    <input type="password" name="password" required class="w-full px-4 py-2 border rounded-md">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Confirmar Senha</label>
-                    <input type="password" name="password_confirmation" required class="w-full px-4 py-2 border rounded-md">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Data de Nascimento</label>
-                    <input type="date" name="birth_date" required class="w-full px-4 py-2 border rounded-md">
-                </div>
-
-                <!-- Checkbox para indicar se o usuário é de fora do Brasil -->
-                <div class="mb-4">
-                    <label class="inline-flex items-center">
-                        <input type="checkbox" id="isInternational" name="isInternational" class="form-checkbox">
-                        <span class="ml-2 text-sm">Não sou do Brasil</span>
-                    </label>
-                </div>
-
-                <!-- Campos para brasileiros -->
-                <div id="brazilianFields">
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700">Estado</label>
-                        @livewire('searchable-dropdown', [
-                            'name' => 'state_id',
-                            'url' => '/get-states',
-                            'placeholder' => 'Digite para buscar um estado...',
-                        ])
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700">Município</label>
-                        @livewire('searchable-dropdown', [
-                            'name' => 'municipality_id',
-                            'url' => '/get-municipalities',
-                            'placeholder' => 'Digite para buscar um município...',
-                            'dependsOn' => 'state_id',
-                        ])
-                    </div>
-
-                    <input type="hidden" name="country_code" value="BR"> <!-- Define Brasil automaticamente -->
-                </div>
-
-                <!-- Campos para estrangeiros -->
-                <div id="internationalFields" class="hidden">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">País</label>
-                        <select name="country_code" id="country" class="w-full px-4 py-2 border rounded-md"></select>
+            <div class="mb-3 relative">
+                <div class="flex items-center mb-2">
+                    <label for="tag" class="text-gray-600 text-sm font-medium">Choose tags (up to 3):</label>
+                    <div class="ml-2 flex flex-wrap gap-1">
+                        <template x-for="(tag, index) in selectedTags" :key="index">
+                            <span
+                                class="py-0.5 px-2.5 text-xs font-medium rounded-full cursor-pointer transition-all duration-200 flex items-center gap-1"
+                                :class="tagColors[tag] || 'bg-gray-200 text-gray-700'"
+                                @click="removeTag(tag)"
+                            >
+                                <span x-text="'#' + tag"></span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </span>
+                        </template>
                     </div>
                 </div>
 
-                <!-- Campos de Instituição -->
-                <div id="institutionFields" class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Instituição</label>
-                    @livewire('searchable-dropdown', [
-                        'name' => 'institution_id',
-                        'url' => '/get-institutions',
-                        'placeholder' => 'Digite para buscar uma instituição...',
-                        'dependsOn' => 'state_id',
-                    ])
+                <div
+                    @click="toggle()"
+                    class="w-full border border-gray-200 rounded-full py-2 px-3 cursor-pointer bg-white flex items-center justify-between hover:border-blue-300 transition-all duration-200"
+                    :class="{ 'ring-1 ring-blue-400 border-blue-400': open }"
+                >
+                    <span
+                        x-text="selectedTags.length > 0 ? 'Selected ' + selectedTags.length + ' tag(s)' : 'Select tags for your post (up to 3)'"
+                        :class="selectedTags.length > 0 ? 'font-medium' : 'text-gray-400'"
+                        class="text-sm"
+                    ></span>
+                    <svg
+                        :class="{'rotate-180': open}"
+                        class="w-4 h-4 text-gray-400 transform transition-transform duration-300"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
                 </div>
 
-                <!-- Checkbox para adicionar nova instituição -->
-                <div class="mb-4">
-                    <label class="inline-flex items-center">
-                        <input type="checkbox" id="newInstitutionCheckbox" class="form-checkbox">
-                        <span class="ml-2 text-sm">Minha instituição não está na lista</span>
-                    </label>
+                <div
+                    x-show="open"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="transform opacity-0 scale-95"
+                    x-transition:enter-end="transform opacity-100 scale-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="transform opacity-100 scale-100"
+                    x-transition:leave-end="transform opacity-0 scale-95"
+                    @click.away="close()"
+                    class="absolute mt-1 w-full z-10 py-2"
+                >
+                    <div class="flex flex-wrap gap-1.5 px-2">
+                        @foreach($tags as $tag)
+                            @if($tag != 'all')
+                                <div
+                                    @click="toggleTag('{{ $tag }}')"
+                                    class="py-1 px-3 cursor-pointer rounded-full text-xs font-medium transition-all duration-200 hover:scale-105 {{ $tagColors[$tag] ?? 'bg-gray-200 text-gray-700' }}"
+                                    x-bind:class="{'ring-2 ring-offset-2': isTagSelected('{{ $tag }}')}"
+                                >
+                                    #{{ $tag }}
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
+            </div>
 
-                <!-- Campo para nova instituição -->
-                <div id="newInstitutionField" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700">Nova Instituição</label>
-                    <input type="text" name="new_institution" class="w-full px-4 py-2 border rounded-md">
-                </div>
+            <template x-for="(tag, index) in selectedTags" :key="index">
+                <input type="hidden" :name="'tags[]'" :value="tag">
+            </template>
 
-                <!-- Campos de Laboratório -->
-                <div id="laboratoryFields" class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Laboratório</label>
-                    @livewire('searchable-dropdown', [
-                        'name' => 'laboratory_id',
-                        'url' => '/get-laboratories',
-                        'placeholder' => 'Digite para buscar um laboratório...',
-                        'dependsOn' => 'institution_id',
-                    ])
-                </div>
-
-                <!-- Checkbox para adicionar novo laboratório -->
-                <div class="mb-4">
-                    <label class="inline-flex items-center">
-                        <input type="checkbox" id="newLaboratoryCheckbox" class="form-checkbox">
-                        <span class="ml-2 text-sm">Meu laboratório não está na lista</span>
-                    </label>
-                </div>
-
-                <!-- Campo para novo laboratório -->
-                <div id="newLaboratoryField" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700">Novo Laboratório</label>
-                    <input type="text" name="new_laboratory" class="w-full px-4 py-2 border rounded-md">
-                </div>
-
-                <div>
-                    <label class="inline-flex items-center">
-                        <input type="checkbox" name="lab_coordinator" class="form-checkbox">
-                        <span class="ml-2">Coordenador de Laboratório?</span>
-                    </label>
-                </div>
-
-                <div>
-                    <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded-md shadow">
-                        Registrar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const isInternationalCheckbox = document.getElementById("isInternational");
-            const brazilianFields = document.getElementById("brazilianFields");
-            const internationalFields = document.getElementById("internationalFields");
-            const countrySelect = document.getElementById("country");
-            const stateSelect = document.getElementById("state_id");
-            const municipalitySelect = document.getElementById("municipality_id");
-            const institutionSelect = document.getElementById("institution_id");
-            const newInstitutionCheckbox = document.getElementById("newInstitutionCheckbox");
-            const newInstitutionField = document.getElementById("newInstitutionField");
-            const institutionFields = document.getElementById("institutionFields");
-            const newLaboratoryCheckbox = document.getElementById("newLaboratoryCheckbox");
-            const newLaboratoryField = document.getElementById("newLaboratoryField");
-            const laboratoryFields = document.getElementById("laboratoryFields");
-            isInternationalCheckbox.addEventListener("change", function() {
-                if (this.checked) {
-                    brazilianFields.classList.add("hidden");
-                    internationalFields.classList.remove("hidden");
-                    countrySelect.required = true;
-                    if (stateSelect) stateSelect.required = false;
-                    if (municipalitySelect) municipalitySelect.required = false;
-                } else {
-                    brazilianFields.classList.remove("hidden");
-                    internationalFields.classList.add("hidden");
-                    countrySelect.value = "BR";
-                    if (stateSelect) stateSelect.required = true;
-                    if (municipalitySelect) municipalitySelect.required = true;
-                    loadStates();
-                }
-            });
-            newInstitutionCheckbox.addEventListener("change", function() {
-                if (this.checked) {
-                    newInstitutionField.classList.remove("hidden");
-                    institutionFields.classList.add("hidden");
-                } else {
-                    newInstitutionField.classList.add("hidden");
-                    institutionFields.classList.remove("hidden");
-                }
-            });
-            newLaboratoryCheckbox.addEventListener("change", function() {
-                if (this.checked) {
-                    newLaboratoryField.classList.remove("hidden");
-                    laboratoryFields.classList.add("hidden");
-                } else {
-                    newLaboratoryField.classList.add("hidden");
-                    laboratoryFields.classList.remove("hidden");
-                }
-            });
-            fetch('/get-countries').then(response => response.json()).then(data => {
-                countrySelect.innerHTML = '<option value="">Selecione um país</option>';
-                data.forEach(country => {
-                    let option = document.createElement('option');
-                    option.value = country.code;
-                    option.textContent = country.name;
-                    countrySelect.appendChild(option);
-                });
-            });
-
-            function loadStates() {
-                if (!stateSelect) return;
-                fetch('/get-states').then(response => response.json()).then(data => {
-                    stateSelect.innerHTML = '<option value="">Selecione um estado</option>';
-                    data.forEach(state => {
-                        let option = document.createElement('option');
-                        option.value = state.id;
-                        option.textContent = state.name;
-                        stateSelect.appendChild(option);
-                    });
-                }).catch(error => console.error("Erro ao carregar estados:", error));
-            }
-            if (stateSelect) {
-                stateSelect.addEventListener('change', function() {
-                    let stateId = this.value;
-                    if (stateId && municipalitySelect) {
-                        fetch(`/get-municipalities/${stateId}`).then(response => response.json()).then(
-                            data => {
-                                municipalitySelect.innerHTML =
-                                    '<option value="">Selecione um município</option>';
-                                data.forEach(municipality => {
-                                    let option = document.createElement('option');
-                                    option.value = municipality.id;
-                                    option.textContent = municipality.name;
-                                    municipalitySelect.appendChild(option);
-                                });
-                            }).catch(error => console.error("Erro ao carregar municípios:", error));
-                        if (institutionSelect) {
-                            fetch(`/get-institutions/${stateId}`).then(response => response.json()).then(
-                                data => {
-                                    institutionSelect.innerHTML =
-                                        '<option value="">Selecione uma instituição</option>';
-                                    data.forEach(institution => {
-                                        let option = document.createElement('option');
-                                        option.value = institution.id;
-                                        option.textContent = institution.name;
-                                        institutionSelect.appendChild(option);
-                                    });
-                                }).catch(error => console.error("Erro ao carregar instituições:",
-                                error));
-                        }
-                    }
-                });
-            }
-            if (!isInternationalCheckbox.checked) {
-                loadStates();
-            }
-        });
-    </script>
-@endsection
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- searchable-dropdown.blade.php -->
-<div class="relative">
-    <input type="text" wire:model="search" placeholder="{{ $placeholder }}" class="w-full px-4 py-2 border rounded-md" />
-
-    @if (!empty($options))
-        <ul class="absolute bg-white border rounded-md w-full mt-1 max-h-48 overflow-auto">
-            @foreach ($options as $option)
-                <li wire:click="selectOption('{{ $option['id'] }}')" class="p-2 cursor-pointer hover:bg-gray-200">
-                    {{ $option['name'] }}
-                </li>
-            @endforeach
-        </ul>
+            <button
+                type="submit"
+                class="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm shadow-sm transition-all duration-200"
+            >
+                Post
+            </button>
+        </form>
     @endif
-
-    <input type="hidden" name="{{ $name }}" value="{{ $selected }}">
 </div>
 
-
-
-
-
-
-<!-- SearchableDropdown.php -->
-<?php
-
-namespace App\Livewire;
-
-use Livewire\Component;
-use Illuminate\Support\Facades\Http;
-
-class SearchableDropdown extends Component
-{
-    public $name;
-    public $url;
-    public $placeholder;
-    public $dependsOn;
-    public $selected;
-    public $search = '';
-    public $options = [];
-
-    public function updatedSearch()
-    {
-        if (strlen($this->search) > 1) {
-            $response = Http::get($this->url, ['query' => $this->search]);
-            $this->options = $response->json();
-        } else {
-            $this->options = [];
+<script>
+    function tagSelector() {
+        return {
+            open: false,
+            selectedTags: [],
+            tagColors: {
+                'general': 'bg-gray-200 text-gray-700',
+                'question': 'bg-red-200 text-red-700',
+                'job': 'bg-blue-200 text-blue-700',
+                'promotion': 'bg-green-200 text-green-700',
+                'idea': 'bg-pink-200 text-pink-700',
+                'collaboration': 'bg-purple-200 text-purple-700',
+                'paper': 'bg-amber-200 text-amber-700',
+                'news': 'bg-cyan-200 text-cyan-700'
+            },
+            toggle() {
+                this.open = !this.open;
+            },
+            close() {
+                this.open = false;
+            },
+            toggleTag(tag) {
+                if (this.isTagSelected(tag)) {
+                    this.removeTag(tag);
+                } else {
+                    this.addTag(tag);
+                }
+            },
+            addTag(tag) {
+                if (this.selectedTags.length < 3 && !this.selectedTags.includes(tag)) {
+                    this.selectedTags.push(tag);
+                }
+            },
+            removeTag(tag) {
+                this.selectedTags = this.selectedTags.filter(t => t !== tag);
+            },
+            isTagSelected(tag) {
+                return this.selectedTags.includes(tag);
+            }
         }
     }
+</script>
 
-    public function selectOption($value)
-    {
-        $this->selected = $value;
-        $this->search = collect($this->options)->firstWhere('id', $value)['name'] ?? '';
-        $this->options = [];
-        $this->dispatchBrowserEvent('selected-option', ['name' => $this->name, 'value' => $value]);
+
+
+{{-- ORIGINAL CODE --}}
+@props(['tags'])
+
+@php
+    $tagColors = [
+        'general' => 'bg-gray-200 text-gray-700',
+        'question' => 'bg-red-200 text-red-700',
+        'job' => 'bg-blue-200 text-blue-700',
+        'promotion' => 'bg-green-200 text-green-700',
+        'idea' => 'bg-pink-200 text-pink-700',
+        'collaboration' => 'bg-purple-200 text-purple-700',
+        'paper' => 'bg-yellow-200 text-yellow-700',
+        'news' => 'bg-cyan-200 text-cyan-700',
+    ];
+@endphp
+
+<div x-data="dropdown()">
+    @if (isset($post))
+        <form action="{{ route('posts.reply', $post) }}" method="POST">
+            @csrf
+            <textarea name="content" rows="2" class="w-full border rounded p-2" placeholder="Reply to this post"></textarea>
+            <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded">Reply</button>
+        </form>
+    @else
+        <form action="{{ route('posts.store') }}" method="POST">
+            @csrf
+            <textarea name="content" rows="2" class="w-full border rounded p-2 mb-2" placeholder="Write your post"></textarea>
+            <div class="mb-2 relative">
+                <label for="tag" class="block text-gray-700 text-sm font-bold mb-2">Select a tag:</label>
+                <div @click="toggle()" class="w-full border rounded p-2 cursor-pointer bg-white flex items-center justify-between" :class="{ 'border-blue-500': open, 'border-gray-300': !open }">
+                    <span x-text="selectedTag ? selectedTag : 'Choose a tag'"></span>
+                    <svg :class="{'rotate-180': open}" class="w-4 h-4 transform transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+                <div x-show="open" @click.away="close()" class="absolute mt-1 w-full rounded bg-white shadow-lg z-10 overflow-y-auto max-h-48">
+                    @foreach($tags as $tag)
+                        <div @click="select('{{ $tag }}')" class="p-2 cursor-pointer {{ $tagColors[$tag] ?? 'bg-gray-200 text-gray-700' }} hover:bg-gray-300">
+                            #{{ $tag }}
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            <input type="hidden" name="tag" x-model="selectedTag">
+            <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded">Post</button>
+        </form>
+    @endif
+</div>
+
+<script>
+    function dropdown() {
+        return {
+            open: false,
+            selectedTag: '',
+            toggle() {
+                this.open = !this.open;
+            },
+            close() {
+                this.open = false;
+            },
+            select(tag) {
+                this.selectedTag = tag;
+                this.close();
+            },
+        }
     }
-
-    public function render()
-    {
-        return view('livewire.searchable-dropdown');
-    }
-}
-
-
-
-<!-- guest.blade.php -->
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-
-    <title>{{ config('app.name', 'Laravel') }}</title>
-
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
-    <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <!-- Livewire Styles -->
-    @livewireStyles
-</head>
-
-<body class="bg-gray-100">
-    <div class="container mx-auto p-4">
-        @yield('content')
-    </div>
-
-    <!-- Livewire Scripts -->
-    @livewireScripts
-</body>
-
-</html>
-
-
-
+</script>
