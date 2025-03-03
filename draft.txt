@@ -3,6 +3,13 @@ sail php artisan cache:clear
 sail php artisan view:clear
 sail php artisan route:clear
 sail php artisan optimize:clear
+
+/opt/cloudlinux/alt-php83/root/usr/bin/php artisan config:clear
+/opt/cloudlinux/alt-php83/root/usr/bin/php artisan cache:clear
+/opt/cloudlinux/alt-php83/root/usr/bin/php artisan view:clear
+/opt/cloudlinux/alt-php83/root/usr/bin/php artisan route:clear
+/opt/cloudlinux/alt-php83/root/usr/bin/php artisan optimize:clear
+
 sail php artisan route:list | grep register
 sail php artisan import:data
 

@@ -63,3 +63,5 @@ Route::middleware(['web'])->group(function () {
     Route::get('/get-institutions/{state_id}', [DropdownController::class, 'getInstitutions']);
     Route::get('/get-laboratories/{institution_id?}', [DropdownController::class, 'getLaboratories']);
 });
+
+Route::match(['get', 'post'], '/dashboard', [PostController::class, 'index'])->name('dashboard');

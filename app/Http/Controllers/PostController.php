@@ -20,17 +20,66 @@ class PostController extends Controller
 
     public function index(Request $request)
     {
+        $tagColors = config('tags.colors');
         $query = Post::with(['user', 'replies.user'])
             ->whereNull('parent_id')
             ->latest();
 
         $selectedTags = $request->input('tags', []);
 
+        if ($request->isMethod('post') && $request->expectsJson()) {
+            if (!is_array($selectedTags)) {
+                $selectedTags = array_filter(explode(',', $selectedTags));
+            }
+            $selectedTags = array_slice($selectedTags, 0, 3);
+
+            if (!empty($selectedTags) && !in_array('all', $selectedTags)) {
+                $query->where(function ($q) use ($selectedTags) {
+                    $q->whereIn('tag', $selectedTags)
+                        ->orWhereJsonContains('additional_tags', $selectedTags);
+                });
+            }
+
+            $posts = $query->get()->map(function ($post) use ($tagColors) {
+                return [
+                    'id' => $post->id,
+                    'user' => [
+                        'id' => $post->user->id,
+                        'name' => $post->user->name,
+                        'profile_url' => route('public.profile', $post->user),
+                    ],
+                    'content' => $post->content,
+                    'tag' => $post->tag,
+                    'tag_color' => $tagColors[$post->tag] ?? 'bg-gray-200 text-gray-700',
+                    'additional_tags' => $post->additional_tags ?? [],
+                    'tag_colors' => $tagColors,
+                    'metadata' => $post->metadata ?? [],
+                    'created_at_diff' => $post->created_at->diffForHumans(),
+                    'can_delete' => auth()->check() && auth()->user()->can('delete', $post),
+                    'reply_url' => route('posts.reply', $post),
+                    'replies' => $post->replies->map(function ($reply) use ($tagColors) {
+                        return [
+                            'id' => $reply->id,
+                            'user' => [
+                                'id' => $reply->user->id,
+                                'name' => $reply->user->name,
+                                'profile_url' => route('public.profile', $reply->user),
+                            ],
+                            'content' => $reply->content,
+                            'metadata' => $reply->metadata ?? [],
+                            'created_at_diff' => $reply->created_at->diffForHumans(),
+                            'can_delete' => auth()->check() && auth()->user()->can('delete', $reply),
+                        ];
+                    })->toArray(),
+                ];
+            });
+
+            return response()->json(['posts' => $posts]);
+        }
+
         if (!is_array($selectedTags)) {
             $selectedTags = explode(',', $selectedTags);
         }
-
-        // Limit tag selection to 3
         $selectedTags = array_slice($selectedTags, 0, 3);
 
         if (!empty($selectedTags) && !in_array('all', $selectedTags)) {
@@ -41,7 +90,7 @@ class PostController extends Controller
         }
 
         $posts = $query->get();
-        $tags = ['all', 'general', 'question', 'job', 'promotion', 'idea', 'collaboration', 'news', 'paper'];
+        $tags = array_keys($tagColors);
 
         return view('dashboard', compact('posts', 'tags', 'selectedTags'));
     }
