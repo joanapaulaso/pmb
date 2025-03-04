@@ -7,7 +7,7 @@
                 <thead>
                     <tr>
                         <th scope="col" class="px-5 py-3 bg-gray-100 border-b border-gray-200 text-gray-800 text-left text-sm uppercase font-normal">
-                            Nome (update test)
+                            Nome (update test 3)
                         </th>
                         <th scope="col" class="px-5 py-3 bg-gray-100 border-b border-gray-200 text-gray-800 text-left text-sm uppercase font-normal">
                             Equipe
