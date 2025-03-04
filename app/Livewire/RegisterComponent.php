@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Jetstream\CreateTeam;
+use App\Actions\Jetstream\AddTeamMember;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Country;
 use App\Models\State;
@@ -269,29 +270,40 @@ class RegisterComponent extends Component
 
             // Criar ou associar o Team usando CreateTeam do Jetstream
             if ($laboratoryName) {
-                $createTeam = new CreateTeam();
-                $teamInput = [
-                    'name' => $laboratoryName,
-                ];
-                $team = $createTeam->create($user, $teamInput);
+                try {
+                    $createTeam = new CreateTeam();
+                    $teamInput = [
+                        'name' => $laboratoryName,
+                    ];
+                    $team = $createTeam->create($user, $teamInput);
 
-                // Garantir que personal_team seja 0 (não é um time pessoal)
-                $team->update(['personal_team' => false]);
-                Log::info('Team criado/atualizado com o nome do laboratório usando Jetstream:', ['team_id' => $team->id, 'name' => $team->name, 'personal_team' => $team->personal_team]);
+                    // Garantir que personal_team seja 0 (não é um time pessoal)
+                    if ($team->personal_team) {
+                        $team->update(['personal_team' => false]);
+                    }
+                    Log::info('Team criado/atualizado com o nome do laboratório usando Jetstream:', [
+                        'team_id' => $team->id,
+                        'name' => $team->name,
+                        'personal_team' => $team->personal_team
+                    ]);
 
-                // Associar o laboratório ao Team (caso ainda não esteja)
-                if ($laboratory && !$laboratory->team_id) {
-                    $laboratory->team_id = $team->id;
-                    $laboratory->save();
-                    Log::info('Laboratório associado ao Team:', ['laboratory_id' => $laboratory->id, 'team_id' => $team->id]);
+                    // Associar o laboratório ao Team (caso ainda não esteja)
+                    if ($laboratory && !$laboratory->team_id) {
+                        $laboratory->team_id = $team->id;
+                        $laboratory->save();
+                        Log::info('Laboratório associado ao Team:', ['laboratory_id' => $laboratory->id, 'team_id' => $team->id]);
+                    }
+
+                    // Vincular o usuário ao Team como owner ou member, usando AddTeamMember do Jetstream
+                    $role = $this->lab_coordinator ? 'owner' : 'member';
+                    $addTeamMember = new AddTeamMember();
+                    $addTeamMember->add($user, $team, $user->email, $role);
+
+                    Log::info('Usuário vinculado ao Team com papel:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $role]);
+                } catch (\Exception $e) {
+                    Log::error('Erro ao criar ou vincular Team:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                    throw new \Exception('Falha ao criar ou vincular o Team: ' . $e->getMessage());
                 }
-
-                // Vincular o usuário ao Team como owner ou member, usando AddTeamMember do Jetstream
-                $role = $this->lab_coordinator ? 'owner' : 'member';
-                $addTeamMember = new \App\Actions\Jetstream\AddTeamMember();
-                $addTeamMember->add($user, $team, $user->email, $role);
-
-                Log::info('Usuário vinculado ao Team com papel:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $role]);
             } else {
                 Log::warning('Nenhum laboratório definido para criar o Team.');
             }
@@ -324,6 +336,9 @@ class RegisterComponent extends Component
             return null;
         }
     }
+
+
+
     public function render()
     {
         return view('livewire.register-component')
