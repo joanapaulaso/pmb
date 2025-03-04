@@ -31,7 +31,7 @@
                             <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                                 <p class="text-gray-900 whitespace-no-wrap">
                                     @forelse ($user->teams as $team)
-                                        {{ $team->name }}
+                                        {{ $team->name }} ({{ $team->pivot->role ?? 'member' }})
                                     @empty
                                         No team
                                     @endforelse

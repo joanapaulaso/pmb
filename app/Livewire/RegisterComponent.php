@@ -252,6 +252,7 @@ class RegisterComponent extends Component
                 $laboratory = Laboratory::create([
                     'name' => $this->new_laboratory,
                     'institution_id' => $this->showNewInstitution ? null : $this->institution_id,
+                    'state_id' => $this->state_id, // Adicionando state_id se necessário
                 ]);
                 $laboratoryName = $this->new_laboratory;
                 Log::info('Novo laboratório criado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
@@ -266,17 +267,19 @@ class RegisterComponent extends Component
             }
 
             // Criar ou associar o Team com base no nome do laboratório
+            // Dentro do método submit(), na seção onde o Team é criado ou associado
             if ($laboratoryName) {
                 // Verificar se já existe um Team com esse nome
                 $team = Team::where('name', $laboratoryName)->first();
 
                 if (!$team) {
                     // Criar novo Team com o nome do laboratório
-                    $team = Team::create([
+                    $team = new Team([
                         'user_id' => $this->lab_coordinator ? $user->id : null, // Coordenador é o dono
                         'name' => $laboratoryName,
                         'personal_team' => false,
                     ]);
+                    $team->save();
                     Log::info('Novo Team criado com o nome do laboratório:', ['team_id' => $team->id, 'name' => $team->name]);
                 } else {
                     Log::info('Team existente encontrado:', ['team_id' => $team->id, 'name' => $team->name]);
@@ -289,16 +292,24 @@ class RegisterComponent extends Component
                     Log::info('Laboratório associado ao Team:', ['laboratory_id' => $laboratory->id, 'team_id' => $team->id]);
                 }
 
-                // Vincular o usuário ao Team
+                // Vincular o usuário ao Team, garantindo que o papel (role) seja definido
+                $pivotData = ['role' => $this->lab_coordinator ? 'owner' : 'member'];
                 if (!$user->teams()->where('team_id', $team->id)->exists()) {
-                    $user->teams()->attach($team->id);
-                    Log::info('Usuário associado ao Team:', ['user_id' => $user->id, 'team_id' => $team->id]);
+                    $user->teams()->attach($team->id, $pivotData);
+                    Log::info('Usuário associado ao Team:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $pivotData['role']]);
+                } else {
+                    // Atualizar o papel (role) no pivot, se necessário
+                    $user->teams()->updateExistingPivot($team->id, $pivotData);
+                    Log::info('Papel do usuário atualizado no Team:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $pivotData['role']]);
                 }
 
-                // Se não for coordenador e o Team não tiver dono, atribuir o usuário como dono
-                if (!$this->lab_coordinator && !$team->user_id) {
+                // Garantir que o dono do Team seja o coordenador ou o primeiro usuário, se necessário
+                if ($this->lab_coordinator && $team->user_id !== $user->id) {
                     $team->update(['user_id' => $user->id]);
-                    Log::info('Usuário atribuído como dono do Team:', ['user_id' => $user->id, 'team_id' => $team->id]);
+                    Log::info('Usuário definido como dono do Team:', ['user_id' => $user->id, 'team_id' => $team->id]);
+                } elseif (!$this->lab_coordinator && !$team->user_id) {
+                    $team->update(['user_id' => $user->id]);
+                    Log::info('Usuário atribuído como dono do Team (não coordenador):', ['user_id' => $user->id, 'team_id' => $team->id]);
                 }
             } else {
                 Log::warning('Nenhum laboratório definido para criar o Team.');
@@ -332,6 +343,8 @@ class RegisterComponent extends Component
             return null;
         }
     }
+
+
 
     public function render()
     {

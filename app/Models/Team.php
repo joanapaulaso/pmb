@@ -50,7 +50,7 @@ class Team extends JetstreamTeam
      */
     public function users()
     {
-        return $this->belongsToMany(User::class, 'team_user');
+        return $this->belongsToMany(User::class, 'team_user')->withPivot('role')->withTimestamps();
     }
 
     /**
