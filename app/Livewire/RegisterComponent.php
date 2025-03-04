@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use App\Actions\Fortify\CreateNewUser;
+use App\Actions\Jetstream\CreateTeam;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Country;
 use App\Models\State;
@@ -181,7 +182,7 @@ class RegisterComponent extends Component
     public function submit()
     {
         try {
-            // Base validation rules
+            // Base validation rules (mantidas como antes)
             $rules = [
                 'full_name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
@@ -252,7 +253,7 @@ class RegisterComponent extends Component
                 $laboratory = Laboratory::create([
                     'name' => $this->new_laboratory,
                     'institution_id' => $this->showNewInstitution ? null : $this->institution_id,
-                    'state_id' => $this->state_id, // Adicionando state_id se necessário
+                    'state_id' => $this->state_id,
                 ]);
                 $laboratoryName = $this->new_laboratory;
                 Log::info('Novo laboratório criado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
@@ -266,24 +267,17 @@ class RegisterComponent extends Component
                 Log::info('Laboratório existente selecionado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
             }
 
-            // Criar ou associar o Team com base no nome do laboratório
-            // Dentro do método submit(), na seção onde o Team é criado ou associado
+            // Criar ou associar o Team usando CreateTeam do Jetstream
             if ($laboratoryName) {
-                // Verificar se já existe um Team com esse nome
-                $team = Team::where('name', $laboratoryName)->first();
+                $createTeam = new CreateTeam();
+                $teamInput = [
+                    'name' => $laboratoryName,
+                ];
+                $team = $createTeam->create($user, $teamInput);
 
-                if (!$team) {
-                    // Criar novo Team com o nome do laboratório
-                    $team = new Team([
-                        'user_id' => $this->lab_coordinator ? $user->id : null, // Coordenador é o dono
-                        'name' => $laboratoryName,
-                        'personal_team' => false,
-                    ]);
-                    $team->save();
-                    Log::info('Novo Team criado com o nome do laboratório:', ['team_id' => $team->id, 'name' => $team->name]);
-                } else {
-                    Log::info('Team existente encontrado:', ['team_id' => $team->id, 'name' => $team->name]);
-                }
+                // Garantir que personal_team seja 0 (não é um time pessoal)
+                $team->update(['personal_team' => false]);
+                Log::info('Team criado/atualizado com o nome do laboratório usando Jetstream:', ['team_id' => $team->id, 'name' => $team->name, 'personal_team' => $team->personal_team]);
 
                 // Associar o laboratório ao Team (caso ainda não esteja)
                 if ($laboratory && !$laboratory->team_id) {
@@ -292,25 +286,12 @@ class RegisterComponent extends Component
                     Log::info('Laboratório associado ao Team:', ['laboratory_id' => $laboratory->id, 'team_id' => $team->id]);
                 }
 
-                // Vincular o usuário ao Team, garantindo que o papel (role) seja definido
-                $pivotData = ['role' => $this->lab_coordinator ? 'owner' : 'member'];
-                if (!$user->teams()->where('team_id', $team->id)->exists()) {
-                    $user->teams()->attach($team->id, $pivotData);
-                    Log::info('Usuário associado ao Team:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $pivotData['role']]);
-                } else {
-                    // Atualizar o papel (role) no pivot, se necessário
-                    $user->teams()->updateExistingPivot($team->id, $pivotData);
-                    Log::info('Papel do usuário atualizado no Team:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $pivotData['role']]);
-                }
+                // Vincular o usuário ao Team como owner ou member, usando AddTeamMember do Jetstream
+                $role = $this->lab_coordinator ? 'owner' : 'member';
+                $addTeamMember = new \App\Actions\Jetstream\AddTeamMember();
+                $addTeamMember->add($user, $team, $user->email, $role);
 
-                // Garantir que o dono do Team seja o coordenador ou o primeiro usuário, se necessário
-                if ($this->lab_coordinator && $team->user_id !== $user->id) {
-                    $team->update(['user_id' => $user->id]);
-                    Log::info('Usuário definido como dono do Team:', ['user_id' => $user->id, 'team_id' => $team->id]);
-                } elseif (!$this->lab_coordinator && !$team->user_id) {
-                    $team->update(['user_id' => $user->id]);
-                    Log::info('Usuário atribuído como dono do Team (não coordenador):', ['user_id' => $user->id, 'team_id' => $team->id]);
-                }
+                Log::info('Usuário vinculado ao Team com papel:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $role]);
             } else {
                 Log::warning('Nenhum laboratório definido para criar o Team.');
             }
@@ -343,9 +324,6 @@ class RegisterComponent extends Component
             return null;
         }
     }
-
-
-
     public function render()
     {
         return view('livewire.register-component')
