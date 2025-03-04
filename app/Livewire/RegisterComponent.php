@@ -184,31 +184,27 @@ class RegisterComponent extends Component
             // Base validation rules
             $rules = [
                 'full_name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users',
+                'email' => 'required|email|unique:users,email',
                 'password' => 'required|min:8|confirmed',
                 'birth_date' => 'nullable|date',
                 'country_code' => 'required|string|max:2|exists:countries,code',
-                'gender' => 'required|string', // Validação para o campo de gênero
+                'gender' => 'required|string',
             ];
 
-            // Add conditional validation rules based on location
             if (!$this->isInternational) {
                 $rules['state_id'] = 'required|exists:states,id';
                 $rules['municipality_id'] = 'required|exists:municipalities,id';
             }
 
-            // Institution validation
             if ($this->showNewInstitution) {
                 $rules['new_institution'] = 'required|string|max:255';
             } else {
                 $rules['institution_id'] = 'required|exists:institutions,id';
             }
 
-            // Laboratory validation
             if ($this->showNewLaboratory) {
                 $rules['new_laboratory'] = 'required|string|max:255';
             } else if (!$this->showNewInstitution) {
-                // Only require lab selection if using an existing institution
                 $rules['laboratory_id'] = 'required|exists:laboratories,id';
             }
 
@@ -229,67 +225,109 @@ class RegisterComponent extends Component
                 'new_laboratory' => $this->new_laboratory,
                 'lab_coordinator' => $this->lab_coordinator,
                 'isInternational' => $this->isInternational,
-                'gender' => $this->gender, // Adicionando o gênero aos dados
+                'gender' => $this->gender,
             ];
 
-            // Adicionar as categorias escolhidas apenas se houver seleções
             if (!empty($this->selectedSubcategories)) {
                 $data['selected_subcategories'] = $this->selectedSubcategories;
             }
 
+            Log::info('Dados enviados para CreateNewUser:', $data);
+
             $createNewUser = new CreateNewUser();
             $user = $createNewUser->create($data);
 
-            // Criar ou associar o laboratório como um Team
-            $team = null;
+            if (!$user || !$user->id) {
+                throw new \Exception('Falha ao criar o usuário: objeto inválido retornado.');
+            }
+
+            Log::info('Usuário criado com sucesso:', ['user_id' => $user->id, 'user_data' => $user->toArray()]);
+
+            // Determinar o nome do laboratório para o Team
+            $laboratoryName = null;
+            $laboratory = null;
+
             if ($this->showNewLaboratory && $this->new_laboratory) {
-                // Criar um novo laboratório e associá-lo como Team
+                // Caso de novo laboratório
                 $laboratory = Laboratory::create([
                     'name' => $this->new_laboratory,
                     'institution_id' => $this->showNewInstitution ? null : $this->institution_id,
                 ]);
-
-                $team = Team::create([
-                    'user_id' => $this->lab_coordinator ? $user->id : null, // Se for coordenador, o usuário é o dono
-                    'name' => $this->new_laboratory,
-                    'personal_team' => false,
-                ]);
-
-                // Vincular o laboratório ao Team (opcional, dependendo da sua estrutura)
-                $laboratory->team_id = $team->id;
-                $laboratory->save();
+                $laboratoryName = $this->new_laboratory;
+                Log::info('Novo laboratório criado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
             } elseif ($this->laboratory_id) {
-                // Verificar se o laboratório já tem um Team associado
+                // Caso de laboratório existente
                 $laboratory = Laboratory::find($this->laboratory_id);
-                $team = Team::where('name', $laboratory->name)->first();
+                if (!$laboratory) {
+                    throw new \Exception('Laboratório selecionado não encontrado.');
+                }
+                $laboratoryName = $laboratory->name;
+                Log::info('Laboratório existente selecionado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
+            }
+
+            // Criar ou associar o Team com base no nome do laboratório
+            if ($laboratoryName) {
+                // Verificar se já existe um Team com esse nome
+                $team = Team::where('name', $laboratoryName)->first();
 
                 if (!$team) {
-                    // Criar um novo Team para o laboratório existente
+                    // Criar novo Team com o nome do laboratório
                     $team = Team::create([
-                        'user_id' => $this->lab_coordinator ? $user->id : null, // Se for coordenador, o usuário é o dono
-                        'name' => $laboratory->name,
+                        'user_id' => $this->lab_coordinator ? $user->id : null, // Coordenador é o dono
+                        'name' => $laboratoryName,
                         'personal_team' => false,
                     ]);
+                    Log::info('Novo Team criado com o nome do laboratório:', ['team_id' => $team->id, 'name' => $team->name]);
+                } else {
+                    Log::info('Team existente encontrado:', ['team_id' => $team->id, 'name' => $team->name]);
+                }
+
+                // Associar o laboratório ao Team (caso ainda não esteja)
+                if ($laboratory && !$laboratory->team_id) {
                     $laboratory->team_id = $team->id;
                     $laboratory->save();
+                    Log::info('Laboratório associado ao Team:', ['laboratory_id' => $laboratory->id, 'team_id' => $team->id]);
                 }
-            }
 
-            // Associar o usuário ao Team
-            if ($team) {
-                $user->teams()->attach($team->id); // Adiciona o usuário ao time
+                // Vincular o usuário ao Team
+                if (!$user->teams()->where('team_id', $team->id)->exists()) {
+                    $user->teams()->attach($team->id);
+                    Log::info('Usuário associado ao Team:', ['user_id' => $user->id, 'team_id' => $team->id]);
+                }
 
-                // Se o usuário não for o coordenador e o time não tiver dono, atribuir o primeiro usuário como dono
+                // Se não for coordenador e o Team não tiver dono, atribuir o usuário como dono
                 if (!$this->lab_coordinator && !$team->user_id) {
                     $team->update(['user_id' => $user->id]);
+                    Log::info('Usuário atribuído como dono do Team:', ['user_id' => $user->id, 'team_id' => $team->id]);
                 }
+            } else {
+                Log::warning('Nenhum laboratório definido para criar o Team.');
             }
 
-            Auth::login($user);
+            // Verificar se o usuário é autenticável antes de tentar login
+            if (!($user instanceof \Illuminate\Contracts\Auth\Authenticatable)) {
+                throw new \Exception('O objeto User não implementa Authenticatable.');
+            }
+
+            $loginSuccessful = Auth::login($user);
+            if (!$loginSuccessful) {
+                Log::error('Falha ao realizar login:', [
+                    'user_id' => $user->id,
+                    'user_data' => $user->toArray(),
+                    'auth_guard' => Auth::guard()->name,
+                    'session_driver' => config('session.driver'),
+                ]);
+                throw new \Exception('Falha ao realizar login do usuário.');
+            }
+
+            Log::info('Login realizado com sucesso para o usuário:', ['user_id' => $user->id]);
 
             return redirect()->route('dashboard')->with('message', 'Conta criada e login realizado com sucesso!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Erro de validação ao registrar usuário:', $e->errors());
+            throw $e;
         } catch (\Exception $e) {
-            Log::error('Erro ao registrar usuário: ' . $e->getMessage());
+            Log::error('Erro ao registrar usuário: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             session()->flash('error', 'Ocorreu um erro ao criar sua conta. Por favor, tente novamente.');
             return null;
         }

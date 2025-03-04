@@ -24,38 +24,30 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    // Route for the dashboard (mantida como está)
-    Route::get('/dashboard', function (Request $request) {
+    // Rota unificada para o dashboard
+    Route::match(['get', 'post'], '/dashboard', function (Request $request) {
         $tags = ['all', 'general', 'question', 'job', 'promotion', 'idea', 'collaboration', 'news', 'paper'];
-        $posts = Post::all();
+        $posts = Post::all(); // Pode ser ajustado para filtragem no PostController se necessário
         $selectedTags = $request->input('tags', []);
+
+        if ($request->isMethod('post')) {
+            // Lógica adicional para POST, como filtragem, pode ser delegada ao PostController
+            return app(PostController::class)->index($request);
+        }
 
         return view('dashboard', compact('posts', 'tags', 'selectedTags'));
     })->name('dashboard');
-});
 
-// Outras rotas autenticadas
-Route::middleware(['auth:sanctum', 'verified'])->group(function () {
-    // Route for the members page
+    // Outras rotas autenticadas
     Route::get('/membros', [UserController::class, 'index'])->name('membros');
-
-    // Route for creating a new post
     Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
-
-    // Route for replying to a post
     Route::post('/posts/{post}/reply', [PostController::class, 'reply'])->name('posts.reply');
-
-    // Route for deleting a post
     Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
-
-    // Route for deleting a reply
     Route::delete('/replies/{reply}', [PostController::class, 'destroyReply'])->name('replies.destroy');
-
-    // Route for public profiles
     Route::get('/profile/{user}', [PublicProfileController::class, 'show'])->name('public.profile');
 });
 
-// Rotas para dropdowns (mantidas como estão)
+// Rotas para dropdowns
 Route::middleware(['web'])->group(function () {
     Route::get('/get-countries', [DropdownController::class, 'getCountries']);
     Route::get('/get-states', [DropdownController::class, 'getStates']);
@@ -63,5 +55,3 @@ Route::middleware(['web'])->group(function () {
     Route::get('/get-institutions/{state_id}', [DropdownController::class, 'getInstitutions']);
     Route::get('/get-laboratories/{institution_id?}', [DropdownController::class, 'getLaboratories']);
 });
-
-Route::match(['get', 'post'], '/dashboard', [PostController::class, 'index'])->name('dashboard');
