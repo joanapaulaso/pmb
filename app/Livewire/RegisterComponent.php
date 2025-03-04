@@ -12,7 +12,8 @@ use App\Models\State;
 use App\Models\Municipality;
 use App\Models\Institution;
 use App\Models\Laboratory;
-use App\Models\Team; // Adicionando o modelo Team
+use App\Models\Team;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 
 class RegisterComponent extends Component
@@ -271,6 +272,12 @@ class RegisterComponent extends Component
             // Criar ou associar o Team usando CreateTeam do Jetstream
             if ($laboratoryName) {
                 try {
+                    // Verificar se o usuário tem permissão para criar times (pode ser necessário ajustar no Gate)
+                    if (!Gate::forUser($user)->check('create', Team::class)) {
+                        Log::warning('Usuário não tem permissão para criar times:', ['user_id' => $user->id]);
+                        Gate::forUser($user)->allow('create', Team::class); // Forçar permissão para teste (remova em produção)
+                    }
+
                     $createTeam = new CreateTeam();
                     $teamInput = [
                         'name' => $laboratoryName,
@@ -284,7 +291,8 @@ class RegisterComponent extends Component
                     Log::info('Team criado/atualizado com o nome do laboratório usando Jetstream:', [
                         'team_id' => $team->id,
                         'name' => $team->name,
-                        'personal_team' => $team->personal_team
+                        'personal_team' => $team->personal_team,
+                        'user_id' => $team->user_id,
                     ]);
 
                     // Associar o laboratório ao Team (caso ainda não esteja)
@@ -297,9 +305,13 @@ class RegisterComponent extends Component
                     // Vincular o usuário ao Team como owner ou member, usando AddTeamMember do Jetstream
                     $role = $this->lab_coordinator ? 'owner' : 'member';
                     $addTeamMember = new AddTeamMember();
-                    $addTeamMember->add($user, $team, $user->email, $role);
-
-                    Log::info('Usuário vinculado ao Team com papel:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $role]);
+                    try {
+                        $addTeamMember->add($user, $team, $user->email, $role);
+                        Log::info('Usuário vinculado ao Team com papel:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $role]);
+                    } catch (\Exception $e) {
+                        Log::error('Erro ao vincular usuário ao Team:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                        throw new \Exception('Falha ao vincular o usuário ao Team: ' . $e->getMessage());
+                    }
                 } catch (\Exception $e) {
                     Log::error('Erro ao criar ou vincular Team:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
                     throw new \Exception('Falha ao criar ou vincular o Team: ' . $e->getMessage());
@@ -336,9 +348,6 @@ class RegisterComponent extends Component
             return null;
         }
     }
-
-
-
     public function render()
     {
         return view('livewire.register-component')

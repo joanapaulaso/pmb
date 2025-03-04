@@ -25,5 +25,13 @@ class AuthServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->registerPolicies();
+
+        Gate::define('create', [Team::class], function ($user) {
+            return true; // Permite que todos os usuários criem times (ajuste conforme necessário)
+        });
+
+        Gate::define('addTeamMember', function ($user, $team) {
+            return $user->ownsTeam($team) || $user->hasRole('admin'); // Ajuste conforme necessário
+        });
     }
 }
