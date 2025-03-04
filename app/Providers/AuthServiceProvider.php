@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Models\Post;
 use App\Policies\PostPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
+use App\Models\Team;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -22,14 +24,16 @@ class AuthServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(): void
     {
         $this->registerPolicies();
 
-        Gate::define('create', [Team::class], function ($user) {
-            return true; // Permite que todos os usuários criem times (ajuste conforme necessário)
+        // Definir permissões para criar times
+        Gate::define('create', function ($user, $team = null) {
+            return $user !== null; // Permite que apenas usuários autenticados criem times (ajuste conforme necessário)
         });
 
+        // Definir permissões para adicionar membros ao time
         Gate::define('addTeamMember', function ($user, $team) {
             return $user->ownsTeam($team) || $user->hasRole('admin'); // Ajuste conforme necessário
         });

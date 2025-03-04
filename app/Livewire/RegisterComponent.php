@@ -246,12 +246,11 @@ class RegisterComponent extends Component
 
             Log::info('Usuário criado com sucesso:', ['user_id' => $user->id, 'user_data' => $user->toArray()]);
 
-            // Determinar o nome do laboratório para o Team
+            // Determine laboratory name and create laboratory
             $laboratoryName = null;
             $laboratory = null;
 
             if ($this->showNewLaboratory && $this->new_laboratory) {
-                // Caso de novo laboratório
                 $laboratory = Laboratory::create([
                     'name' => $this->new_laboratory,
                     'institution_id' => $this->showNewInstitution ? null : $this->institution_id,
@@ -260,7 +259,6 @@ class RegisterComponent extends Component
                 $laboratoryName = $this->new_laboratory;
                 Log::info('Novo laboratório criado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
             } elseif ($this->laboratory_id) {
-                // Caso de laboratório existente
                 $laboratory = Laboratory::find($this->laboratory_id);
                 if (!$laboratory) {
                     throw new \Exception('Laboratório selecionado não encontrado.');
@@ -269,41 +267,33 @@ class RegisterComponent extends Component
                 Log::info('Laboratório existente selecionado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
             }
 
-            // Criar ou associar o Team usando CreateTeam do Jetstream
+            // Create team if laboratory exists
             if ($laboratoryName) {
-                try {
-                    // Verificar se o usuário tem permissão para criar times (pode ser necessário ajustar no Gate)
-                    if (!Gate::forUser($user)->check('create', Team::class)) {
-                        Log::warning('Usuário não tem permissão para criar times:', ['user_id' => $user->id]);
-                        Gate::forUser($user)->allow('create', Team::class); // Forçar permissão para teste (remova em produção)
-                    }
+                $createTeam = new CreateTeam();
+                $teamInput = ['name' => $laboratoryName];
+                $team = $createTeam->create($user, $teamInput);
 
-                    $createTeam = new CreateTeam();
-                    $teamInput = [
-                        'name' => $laboratoryName,
-                    ];
-                    $team = $createTeam->create($user, $teamInput);
+                // Ensure personal_team is false
+                if ($team->personal_team) {
+                    $team->update(['personal_team' => false]);
+                }
+                Log::info('Team criado/atualizado com o nome do laboratório usando Jetstream:', [
+                    'team_id' => $team->id,
+                    'name' => $team->name,
+                    'personal_team' => $team->personal_team,
+                    'user_id' => $team->user_id,
+                ]);
 
-                    // Garantir que personal_team seja 0 (não é um time pessoal)
-                    if ($team->personal_team) {
-                        $team->update(['personal_team' => false]);
-                    }
-                    Log::info('Team criado/atualizado com o nome do laboratório usando Jetstream:', [
-                        'team_id' => $team->id,
-                        'name' => $team->name,
-                        'personal_team' => $team->personal_team,
-                        'user_id' => $team->user_id,
-                    ]);
+                // Associate laboratory with team
+                if ($laboratory && !$laboratory->team_id) {
+                    $laboratory->team_id = $team->id;
+                    $laboratory->save();
+                    Log::info('Laboratório associado ao Team:', ['laboratory_id' => $laboratory->id, 'team_id' => $team->id]);
+                }
 
-                    // Associar o laboratório ao Team (caso ainda não esteja)
-                    if ($laboratory && !$laboratory->team_id) {
-                        $laboratory->team_id = $team->id;
-                        $laboratory->save();
-                        Log::info('Laboratório associado ao Team:', ['laboratory_id' => $laboratory->id, 'team_id' => $team->id]);
-                    }
-
-                    // Vincular o usuário ao Team como owner ou member, usando AddTeamMember do Jetstream
-                    $role = $this->lab_coordinator ? 'owner' : 'member';
+                // Add user as a team member only if not the coordinator (owner)
+                if (!$this->lab_coordinator) {
+                    $role = 'editor'; // Use a valid Jetstream role (e.g., 'editor' or customize in config/jetstream.php)
                     $addTeamMember = new AddTeamMember();
                     try {
                         $addTeamMember->add($user, $team, $user->email, $role);
@@ -312,9 +302,8 @@ class RegisterComponent extends Component
                         Log::error('Erro ao vincular usuário ao Team:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
                         throw new \Exception('Falha ao vincular o usuário ao Team: ' . $e->getMessage());
                     }
-                } catch (\Exception $e) {
-                    Log::error('Erro ao criar ou vincular Team:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-                    throw new \Exception('Falha ao criar ou vincular o Team: ' . $e->getMessage());
+                } else {
+                    Log::info('Usuário é o coordenador e já é o dono do time; nenhuma ação adicional necessária.', ['user_id' => $user->id, 'team_id' => $team->id]);
                 }
             } else {
                 Log::warning('Nenhum laboratório definido para criar o Team.');
@@ -325,23 +314,9 @@ class RegisterComponent extends Component
                 throw new \Exception('O objeto User não implementa Authenticatable.');
             }
 
-            $loginSuccessful = Auth::login($user);
-            if (!$loginSuccessful) {
-                Log::error('Falha ao realizar login:', [
-                    'user_id' => $user->id,
-                    'user_data' => $user->toArray(),
-                    'auth_guard' => Auth::guard()->name,
-                    'session_driver' => config('session.driver'),
-                ]);
-                throw new \Exception('Falha ao realizar login do usuário.');
-            }
-
+            Auth::login($user);
             Log::info('Login realizado com sucesso para o usuário:', ['user_id' => $user->id]);
-
             return redirect()->route('dashboard')->with('message', 'Conta criada e login realizado com sucesso!');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::warning('Erro de validação ao registrar usuário:', $e->errors());
-            throw $e;
         } catch (\Exception $e) {
             Log::error('Erro ao registrar usuário: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             session()->flash('error', 'Ocorreu um erro ao criar sua conta. Por favor, tente novamente.');
