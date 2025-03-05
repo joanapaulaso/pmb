@@ -81,13 +81,10 @@
     "src": "resources/images/mass_spec_detail_00.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-By1huC_z.js",
+    "file": "assets/app-4mNzUsqY.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
-    "imports": [
-      "resources/js/register-form.js"
-    ],
     "assets": [
       "assets/carousel-D2dj3uaZ.png",
       "assets/carousel_00-aJwdxpbF.png",
