@@ -24,6 +24,7 @@ export default defineConfig({
             input: {
                 app: 'resources/js/app.js',
                 appCss: 'resources/css/app.css',
+                form: 'resources/js/register-form.js',
             },
         },
     },

@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/appCss-CDcOAbTc.css",
+    "file": "assets/appCss-DaG1kWjK.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -81,10 +81,13 @@
     "src": "resources/images/mass_spec_detail_00.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-BS2Sz3aR.js",
+    "file": "assets/app-By1huC_z.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
+    "imports": [
+      "resources/js/register-form.js"
+    ],
     "assets": [
       "assets/carousel-D2dj3uaZ.png",
       "assets/carousel_00-aJwdxpbF.png",
@@ -106,5 +109,11 @@
       "assets/logo-Dtae_Na8.svg",
       "assets/mass_spec_detail_00-DKwV-mSC.png"
     ]
+  },
+  "resources/js/register-form.js": {
+    "file": "assets/form-qcHOW_Td.js",
+    "name": "form",
+    "src": "resources/js/register-form.js",
+    "isEntry": true
   }
 }
