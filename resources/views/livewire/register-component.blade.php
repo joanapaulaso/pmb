@@ -125,6 +125,19 @@
                     @error('institution_id') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
 
+                <!-- Novo campo de endereço (exibido apenas se uma instituição for selecionada) -->
+                {{-- <div class="{{ !$institution_id || $showNewInstitution ? 'hidden' : 'mb-4' }}">
+                    <label class="block text-sm font-medium text-gray-700">Endereço da Instituição</label>
+                    <input
+                        type="text"
+                        id="institution-address"
+                        wire:model.live="institution_address"
+                        class="w-full px-4 py-2 border rounded-md"
+                        placeholder="Digite o endereço da instituição..."
+                    >
+                    @error('institution_address') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                </div> --}}
+
                 <div class="mb-4">
                     <label class="inline-flex items-center">
                         <input type="checkbox" wire:model.live="showNewInstitution" class="form-checkbox">
@@ -132,7 +145,7 @@
                     </label>
                 </div>
 
-                <!-- New Institution Field (conditionally shown) -->
+                <!-- New Institution Field -->
                 <div class="{{ !$showNewInstitution ? 'hidden' : 'mb-4' }}">
                     <label class="block text-sm font-medium text-gray-700">Nova Instituição</label>
                     <input type="text" wire:model="new_institution" class="w-full px-4 py-2 border rounded-md">
@@ -257,16 +270,6 @@
     </div>
 </div>
 
-@script
-<script>
-    document.addEventListener('livewire:init', () => {
-        // Limpar a seleção do dropdown de subcategorias após adicionar um item
-        Livewire.on('subcategoryAdded', () => {
-            const select = document.getElementById('subcategory-select');
-            if (select) {
-                select.selectedIndex = 0;
-            }
-        });
-    });
-</script>
-@endscript
+@push('scripts')
+    <script src="{{ mix('js/register-form.js') }}"></script>
+@endpush

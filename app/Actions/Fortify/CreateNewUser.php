@@ -19,80 +19,72 @@ class CreateNewUser implements CreatesNewUsers
 {
     public function create(array $input)
     {
-        try {
-            Validator::make($input, [
-                'full_name' => ['required', 'string', 'max:255'],
-                'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-                'password' => ['required', 'string', 'min:8', 'confirmed'],
-                'birth_date' => ['nullable', 'date'],
-                'institution_id' => ['nullable', 'exists:institutions,id'],
-                'new_institution' => ['nullable', 'string', 'max:255'],
-                'country_code' => ['required_if:isInternational,true', 'string', 'max:2', 'exists:countries,code'],
-                'state_id' => ['nullable', 'exists:states,id', 'exclude_if:isInternational,true'],
-                'municipality_id' => ['nullable', 'exists:municipalities,id', 'exclude_if:isInternational,true'],
-                'laboratory_id' => ['nullable', 'exists:laboratories,id'],
-                'new_laboratory' => ['nullable', 'string', 'max:255'],
-                'gender' => ['required', 'string'], // Adicionada validação para gênero
-            ])->validate();
+        Validator::make($input, [
+            'full_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'birth_date' => ['nullable', 'date'],
+            'institution_id' => ['nullable', 'exists:institutions,id'],
+            'new_institution' => ['nullable', 'string', 'max:255'],
+            'country_code' => ['required_if:isInternational,true', 'string', 'max:2', 'exists:countries,code'],
+            'state_id' => ['nullable', 'exists:states,id', 'exclude_if:isInternational,true'],
+            'municipality_id' => ['nullable', 'exists:municipalities,id', 'exclude_if:isInternational,true'],
+            'laboratory_id' => ['nullable', 'exists:laboratories,id'],
+            'new_laboratory' => ['nullable', 'string', 'max:255'],
+            'gender' => ['required', 'string'],
+            'institution_address' => ['nullable', 'string', 'max:255'], // Novo campo
+        ])->validate();
 
-            // Criar nova instituição se o usuário digitou uma nova
-            if (!empty($input['new_institution'])) {
-                $institution = Institution::create([
-                    'name' => $input['new_institution'],
-                    'state_id' => $input['state_id'] ?? null,
-                    'municipality_id' => $input['municipality_id'] ?? null,
-                    'country_code' => $input['country_code'] ?? 'BR', // Padrão: Brasil
-                ]);
-                $input['institution_id'] = $institution->id;
-            }
-
-            // Criar novo laboratório se o usuário digitou um novo
-            if (!empty($input['new_laboratory'])) {
-                $input['laboratory_id'] = $this->getOrCreateLaboratory(
-                    $input['new_laboratory'],
-                    $input['institution_id'] ?? null,
-                    $input['state_id'] ?? null
-                );
-            }
-
-            // Criar usuário - invertendo para não usar transaction por enquanto
-            $user = User::create([
-                'name' => $input['full_name'],
-                'email' => $input['email'],
-                'password' => Hash::make($input['password']),
-            ]);
-
-            // Criar o perfil associado ao usuário
-            Profile::create([
-                'user_id' => $user->id,
-                'birth_date' => $input['birth_date'] ?? null,
-                'institution_id' => $input['institution_id'] ?? null,
-                'country_code' => $input['country_code'] ?? null,
+        // Criar ou atualizar instituição com o endereço
+        if (!empty($input['new_institution'])) {
+            $institution = Institution::create([
+                'name' => $input['new_institution'],
                 'state_id' => $input['state_id'] ?? null,
                 'municipality_id' => $input['municipality_id'] ?? null,
-                'lab_coordinator' => isset($input['lab_coordinator']) ? 1 : 0,
-                'laboratory_id' => $input['laboratory_id'] ?? null,
-                'gender' => $input['gender'] ?? null, // Adicionado campo de gênero
+                'country_code' => $input['country_code'] ?? 'BR',
+                'address' => $input['institution_address'] ?? null, // Salvar endereço para nova instituição
             ]);
-
-            // Salvar as subcategorias é opcional e não impede criação do usuário
-            try {
-                if (!empty($input['selected_subcategories'])) {
-                    // Verifique se as classes existem antes de tentar usá-las
-                    if (class_exists('App\Models\Category') && class_exists('App\Models\UserCategory')) {
-                        $this->saveUserCategories($user, $input['selected_subcategories']);
-                    }
-                }
-            } catch (\Exception $e) {
-                // Apenas logamos o erro, mas não impedimos a criação do usuário
-                Log::error('Erro ao salvar categorias: ' . $e->getMessage());
+            $input['institution_id'] = $institution->id;
+        } elseif (!empty($input['institution_id']) && !empty($input['institution_address'])) {
+            // Atualizar o endereço da instituição existente, se fornecido
+            $institution = Institution::find($input['institution_id']);
+            if ($institution && !$institution->address) { // Apenas atualiza se ainda não houver endereço
+                $institution->update(['address' => $input['institution_address']]);
             }
-
-            return $user;
-        } catch (\Exception $e) {
-            Log::error('Erro ao criar usuário: ' . $e->getMessage());
-            throw $e; // Re-lançar exceção para ser capturada pelo sistema
         }
+
+        // Restante do código existente
+        if (!empty($input['new_laboratory'])) {
+            $input['laboratory_id'] = $this->getOrCreateLaboratory(
+                $input['new_laboratory'],
+                $input['institution_id'] ?? null,
+                $input['state_id'] ?? null
+            );
+        }
+
+        $user = User::create([
+            'name' => $input['full_name'],
+            'email' => $input['email'],
+            'password' => Hash::make($input['password']),
+        ]);
+
+        Profile::create([
+            'user_id' => $user->id,
+            'birth_date' => $input['birth_date'] ?? null,
+            'institution_id' => $input['institution_id'] ?? null,
+            'country_code' => $input['country_code'] ?? null,
+            'state_id' => $input['state_id'] ?? null,
+            'municipality_id' => $input['municipality_id'] ?? null,
+            'lab_coordinator' => isset($input['lab_coordinator']) ? 1 : 0,
+            'laboratory_id' => $input['laboratory_id'] ?? null,
+            'gender' => $input['gender'] ?? null,
+        ]);
+
+        if (!empty($input['selected_subcategories'])) {
+            $this->saveUserCategories($user, $input['selected_subcategories']);
+        }
+
+        return $user;
     }
 
     /**

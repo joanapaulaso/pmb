@@ -24,13 +24,14 @@ class RegisterComponent extends Component
     public $state_id = null;
     public $municipality_id = null;
     public $institution_id = null;
+    public $institution_address = '';
     public $laboratory_id = null;
     public $new_institution = '';
     public $new_laboratory = '';
     public $showNewInstitution = false;
     public $showNewLaboratory = false;
     public $lab_coordinator = false;
-    public $gender = ''; // Nova propriedade para gênero
+    public $gender = '';
 
     // Adicionando variáveis para as categorias
     public $categories = [];
@@ -38,7 +39,13 @@ class RegisterComponent extends Component
     public $selectedSubcategories = [];
     public $subcategories = [];
 
-    protected $listeners = ['optionSelected', 'addSubcategory', 'removeSubcategory'];
+
+    protected $listeners = [
+        'optionSelected',
+        'addSubcategory',
+        'removeSubcategory',
+        'setInstitutionAddress' => 'setInstitutionAddress',
+    ];
 
     public function mount()
     {
@@ -53,6 +60,11 @@ class RegisterComponent extends Component
 
         // Carregar categorias do arquivo JSON
         $this->loadCategories();
+    }
+
+    public function setInstitutionAddress($data)
+    {
+        $this->institution_address = $data['address'] ?? '';
     }
 
     public function loadCategories()
@@ -148,30 +160,29 @@ class RegisterComponent extends Component
         $this->dispatch('dependencyChanged');
     }
 
-    public function updatedInstitutionId()
+    public function updatedInstitutionId($value)
     {
-        // Reset dependent fields when institution changes
+        // Resetar campos dependentes
         $this->laboratory_id = null;
-
-        // Broadcast changes to dependent components
+        $this->institution_address = ''; // Resetar o endereço quando a instituição mudar
         $this->dispatch('dependencyChanged');
     }
 
     public function optionSelected($data)
     {
-        \Log::info("Option selected in parent: " . json_encode($data));
+        Log::info("Option selected in parent: " . json_encode($data));
 
-        // Only update if the field belongs to this component
         if (isset($data['field']) && property_exists($this, $data['field'])) {
             $this->{$data['field']} = $data['value'];
 
-            // Reset dependent fields based on what changed
             if ($data['field'] === 'state_id') {
                 $this->municipality_id = null;
-                // Don't reset institution_id here to prevent losing user data
             } else if ($data['field'] === 'country_code') {
                 $this->state_id = null;
                 $this->municipality_id = null;
+            } else if ($data['field'] === 'institution_id') {
+                // Quando uma instituição é selecionada, limpar o campo de endereço
+                $this->institution_address = '';
             }
         }
     }
@@ -184,7 +195,7 @@ class RegisterComponent extends Component
     public function submit()
     {
         try {
-            // Base validation rules (mantidas como antes)
+            // Regras de validação básicas
             $rules = [
                 'full_name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
@@ -192,27 +203,33 @@ class RegisterComponent extends Component
                 'birth_date' => 'nullable|date',
                 'country_code' => 'required|string|max:2|exists:countries,code',
                 'gender' => 'required|string',
+                'institution_address' => 'nullable|string|max:255', // Novo campo de endereço (opcional)
             ];
 
+            // Regras condicionais para localização (se usuário for do Brasil)
             if (!$this->isInternational) {
                 $rules['state_id'] = 'required|exists:states,id';
                 $rules['municipality_id'] = 'required|exists:municipalities,id';
             }
 
+            // Regras condicionais para instituição
             if ($this->showNewInstitution) {
                 $rules['new_institution'] = 'required|string|max:255';
             } else {
                 $rules['institution_id'] = 'required|exists:institutions,id';
             }
 
+            // Regras condicionais para laboratório
             if ($this->showNewLaboratory) {
                 $rules['new_laboratory'] = 'required|string|max:255';
             } else if (!$this->showNewInstitution) {
                 $rules['laboratory_id'] = 'required|exists:laboratories,id';
             }
 
+            // Executar a validação
             $this->validate($rules);
 
+            // Preparar os dados a serem enviados para CreateNewUser
             $data = [
                 'full_name' => $this->full_name,
                 'email' => $this->email,
@@ -229,14 +246,17 @@ class RegisterComponent extends Component
                 'lab_coordinator' => $this->lab_coordinator,
                 'isInternational' => $this->isInternational,
                 'gender' => $this->gender,
+                'institution_address' => $this->institution_address, // Novo campo adicionado
             ];
 
+            // Adicionar subcategorias, se houver
             if (!empty($this->selectedSubcategories)) {
                 $data['selected_subcategories'] = $this->selectedSubcategories;
             }
 
             Log::info('Dados enviados para CreateNewUser:', $data);
 
+            // Criar o usuário usando a ação CreateNewUser
             $createNewUser = new CreateNewUser();
             $user = $createNewUser->create($data);
 
@@ -246,7 +266,7 @@ class RegisterComponent extends Component
 
             Log::info('Usuário criado com sucesso:', ['user_id' => $user->id, 'user_data' => $user->toArray()]);
 
-            // Determine laboratory name and create laboratory
+            // Determinar o nome do laboratório e criar o laboratório, se necessário
             $laboratoryName = null;
             $laboratory = null;
 
@@ -267,13 +287,13 @@ class RegisterComponent extends Component
                 Log::info('Laboratório existente selecionado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
             }
 
-            // Create team if laboratory exists
+            // Criar equipe (team) se houver um laboratório
             if ($laboratoryName) {
                 $createTeam = new CreateTeam();
                 $teamInput = ['name' => $laboratoryName];
                 $team = $createTeam->create($user, $teamInput);
 
-                // Ensure personal_team is false
+                // Garantir que personal_team seja falso
                 if ($team->personal_team) {
                     $team->update(['personal_team' => false]);
                 }
@@ -284,16 +304,16 @@ class RegisterComponent extends Component
                     'user_id' => $team->user_id,
                 ]);
 
-                // Associate laboratory with team
+                // Associar o laboratório ao time
                 if ($laboratory && !$laboratory->team_id) {
                     $laboratory->team_id = $team->id;
                     $laboratory->save();
                     Log::info('Laboratório associado ao Team:', ['laboratory_id' => $laboratory->id, 'team_id' => $team->id]);
                 }
 
-                // Add user as a team member only if not the coordinator (owner)
+                // Adicionar o usuário como membro da equipe, exceto se for o coordenador
                 if (!$this->lab_coordinator) {
-                    $role = 'editor'; // Use a valid Jetstream role (e.g., 'editor' or customize in config/jetstream.php)
+                    $role = 'editor'; // Papel padrão do Jetstream
                     $addTeamMember = new AddTeamMember();
                     try {
                         $addTeamMember->add($user, $team, $user->email, $role);
@@ -309,11 +329,12 @@ class RegisterComponent extends Component
                 Log::warning('Nenhum laboratório definido para criar o Team.');
             }
 
-            // Verificar se o usuário é autenticável antes de tentar login
+            // Verificar se o usuário é autenticável antes de fazer login
             if (!($user instanceof \Illuminate\Contracts\Auth\Authenticatable)) {
                 throw new \Exception('O objeto User não implementa Authenticatable.');
             }
 
+            // Fazer login e redirecionar
             Auth::login($user);
             Log::info('Login realizado com sucesso para o usuário:', ['user_id' => $user->id]);
             return redirect()->route('dashboard')->with('message', 'Conta criada e login realizado com sucesso!');
@@ -323,6 +344,8 @@ class RegisterComponent extends Component
             return null;
         }
     }
+
+
     public function render()
     {
         return view('livewire.register-component')
