@@ -269,5 +269,3 @@
         </form>
     </div>
 </div>
-
-@vite('resources/js/register-form.js')
