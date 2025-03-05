@@ -43,21 +43,21 @@ function initRegisterForm() {
 }
 
 // Carregar o Google Maps API dinamicamente
-// function loadGoogleMaps() {
-//     if (!window.google || !window.google.maps) {
-//         const script = document.createElement('script');
-//         script.src = 'https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&loading=async';
-//         script.async = true;
-//         script.onload = () => {
-//             console.log('Google Maps API carregado com sucesso.');
-//             initRegisterForm();
-//         };
-//         script.onerror = () => console.error('Erro ao carregar Google Maps API.');
-//         document.head.appendChild(script);
-//     } else {
-//         initRegisterForm();
-//     }
-// }
+function loadGoogleMaps() {
+    if (!window.google || !window.google.maps) {
+        const script = document.createElement('script');
+        script.src = 'https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&loading=async';
+        script.async = true;
+        script.onload = () => {
+            console.log('Google Maps API carregado com sucesso.');
+            initRegisterForm();
+        };
+        script.onerror = () => console.error('Erro ao carregar Google Maps API.');
+        document.head.appendChild(script);
+    } else {
+        initRegisterForm();
+    }
+}
 
-// // Iniciar o carregamento
-// loadGoogleMaps();
+// Iniciar o carregamento
+loadGoogleMaps();
