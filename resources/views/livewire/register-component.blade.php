@@ -270,6 +270,4 @@
     </div>
 </div>
 
-@push('scripts')
-    <script src="{{ mix('js/register-form.js') }}"></script>
-@endpush
+@vite('resources/js/register-form.js')
