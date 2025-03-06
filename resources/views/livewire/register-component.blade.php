@@ -125,19 +125,6 @@
                     @error('institution_id') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Novo campo de endereço (exibido apenas se uma instituição for selecionada) -->
-                {{-- <div class="{{ !$institution_id || $showNewInstitution ? 'hidden' : 'mb-4' }}">
-                    <label class="block text-sm font-medium text-gray-700">Endereço da Instituição</label>
-                    <input
-                        type="text"
-                        id="institution-address"
-                        wire:model.live="institution_address"
-                        class="w-full px-4 py-2 border rounded-md"
-                        placeholder="Digite o endereço da instituição..."
-                    >
-                    @error('institution_address') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-                </div> --}}
-
                 <div class="mb-4">
                     <label class="inline-flex items-center">
                         <input type="checkbox" wire:model.live="showNewInstitution" class="form-checkbox">

@@ -290,7 +290,10 @@ class RegisterComponent extends Component
             // Criar equipe (team) se houver um laboratório
             if ($laboratoryName) {
                 $createTeam = new CreateTeam();
-                $teamInput = ['name' => $laboratoryName];
+                $teamInput = [
+                    'name' => $laboratoryName,
+                    'address' => $this->institution_address, // Endereço inicial definido pelo coordenador
+                ];
                 $team = $createTeam->create($user, $teamInput);
 
                 // Garantir que personal_team seja falso

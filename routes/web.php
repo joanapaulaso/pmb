@@ -6,6 +6,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\DropdownController;
+use App\Http\Controllers\TeamController;
 use App\Models\Post;
 use App\Livewire\RegisterComponent;
 
@@ -45,6 +46,11 @@ Route::middleware([
     Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
     Route::delete('/replies/{reply}', [PostController::class, 'destroyReply'])->name('replies.destroy');
     Route::get('/profile/{user}', [PublicProfileController::class, 'show'])->name('public.profile');
+
+});
+
+Route::group(['middleware' => ['auth', 'verified']], function () {
+    Route::get('/teams/{team}/settings', [TeamController::class, 'show'])->name('teams.show');
 });
 
 // Rotas para dropdowns

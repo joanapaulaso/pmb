@@ -73,4 +73,19 @@ class TeamPolicy
     {
         return $user->ownsTeam($team);
     }
+
+    // Apenas o coordenador pode atualizar o endereço
+    public function updateAddress(User $user, Team $team)
+    {
+        // Verifica se o usuário é o dono do time (coordenador)
+        return $team->user_id === $user->id;
+    }
+
+    // Qualquer usuário autenticado pode visualizar o endereço
+    public function viewAddress(?User $user, Team $team)
+    {
+        // Retorna true se o usuário estiver autenticado
+        return !is_null($user);
+    }
+
 }

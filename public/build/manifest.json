@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/appCss-DaG1kWjK.css",
+    "file": "assets/appCss-BJsufu2H.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -106,11 +106,5 @@
       "assets/logo-Dtae_Na8.svg",
       "assets/mass_spec_detail_00-DKwV-mSC.png"
     ]
-  },
-  "resources/js/register-form.js": {
-    "file": "assets/form-qcHOW_Td.js",
-    "name": "form",
-    "src": "resources/js/register-form.js",
-    "isEntry": true
   }
 }

@@ -8,8 +8,7 @@
         <title>{{ config('app.name', 'Guest') }}</title>
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-        @vite(['resources/css/app.css'])
-        @vite('resources/js/register-form.js')
+        @vite(['resources/css/app.css', 'resources/js/register-form.js'])
         @livewireStyles
     </head>
     <body class="bg-gray-100">

@@ -14,6 +14,12 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+        <!-- Google Maps API Loader -->
+        <gmpx-api-loader key="AIzaSyD4xIxoKPy81-hrL8IXLqhQoMmtQoXqVLY" solution-channel="GMP_GE_mapsandplacesautocomplete_v2"></gmpx-api-loader>
+
+        <!-- Extended Component Library -->
+        <script type="module" src="https://unpkg.com/@googlemaps/extended-component-library@0.6/dist/index.min.js"></script>
+
         <!-- Styles -->
         @livewireStyles
     </head>
