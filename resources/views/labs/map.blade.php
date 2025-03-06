@@ -121,7 +121,7 @@
         async function initMap() {
             try {
                 await customElements.whenDefined('gmp-map');
-                console.log('Componente gmp-map definido');
+                // console.log('Componente gmp-map definido');
 
                 map = document.getElementById('labs-map');
 
