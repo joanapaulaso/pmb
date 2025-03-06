@@ -82,7 +82,7 @@
                     <form action="{{ route('posts.destroy', $post) }}" method="POST" class="inline">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="text-red-500">Delete</button>
+                        <button type="submit" class="text-red-500">Deletar</button>
                     </form>
                 @endcan
 
