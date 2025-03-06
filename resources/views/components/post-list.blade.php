@@ -152,18 +152,36 @@ window.toggleTag = function(element, tag) {
             document.querySelectorAll('.tag-button').forEach(btn => {
                 btn.classList.remove('bg-gray-800', 'text-white');
                 const originalStyles = btn.getAttribute('data-original-styles');
-                originalStyles.split(' ').forEach(cls => btn.classList.add(cls));
+                // Adiciona cada classe do data-original-styles separadamente
+                if (originalStyles) {
+                    originalStyles.split(' ').forEach(cls => {
+                        if (cls) btn.classList.add(cls);
+                    });
+                }
             });
         } else {
             selectedTags = ['all'];
             document.querySelectorAll('.tag-button').forEach(btn => {
                 const btnTag = btn.getAttribute('data-tag');
-                btn.classList.remove('bg-gray-800', 'text-white');
+                // Remover todas as classes de cores originais
                 const originalStyles = btn.getAttribute('data-original-styles');
+                if (originalStyles) {
+                    originalStyles.split(' ').forEach(cls => {
+                        if (cls) btn.classList.remove(cls);
+                    });
+                }
+
+                // Adicionar classes apropriadas
                 if (btnTag === 'all') {
                     btn.classList.add('bg-gray-800', 'text-white');
                 } else {
-                    originalStyles.split(' ').forEach(cls => btn.classList.add(cls));
+                    // Replicar as classes originais
+                    const originalStyles = btn.getAttribute('data-original-styles');
+                    if (originalStyles) {
+                        originalStyles.split(' ').forEach(cls => {
+                            if (cls) btn.classList.add(cls);
+                        });
+                    }
                 }
             });
         }
@@ -174,18 +192,39 @@ window.toggleTag = function(element, tag) {
             if (allBtn) {
                 allBtn.classList.remove('bg-gray-800', 'text-white');
                 const originalStyles = allBtn.getAttribute('data-original-styles');
-                originalStyles.split(' ').forEach(cls => allBtn.classList.add(cls));
+                if (originalStyles) {
+                    originalStyles.split(' ').forEach(cls => {
+                        if (cls) allBtn.classList.add(cls);
+                    });
+                }
             }
         }
 
         if (selectedTags.includes(tag)) {
             selectedTags = selectedTags.filter(t => t !== tag);
+
+            // Remover classes de seleção
             element.classList.remove('bg-gray-800', 'text-white');
+
+            // Adicionar classes originais
             const originalStyles = element.getAttribute('data-original-styles');
-            originalStyles.split(' ').forEach(cls => element.classList.add(cls));
+            if (originalStyles) {
+                originalStyles.split(' ').forEach(cls => {
+                    if (cls) element.classList.add(cls);
+                });
+            }
         } else if (selectedTags.length < 3) {
             selectedTags.push(tag);
-            element.classList.remove(...element.getAttribute('data-original-styles').split(' ').filter(Boolean));
+
+            // Remover as classes originais uma por uma
+            const originalStyles = element.getAttribute('data-original-styles');
+            if (originalStyles) {
+                originalStyles.split(' ').forEach(cls => {
+                    if (cls) element.classList.remove(cls);
+                });
+            }
+
+            // Adicionar classes de seleção
             element.classList.add('bg-gray-800', 'text-white');
         }
     }
