@@ -14,7 +14,7 @@ return [
     */
 
     'colors' => [
-        'all' => 'bg-gray-300 text-gray-700',
+        'all' => 'bg-gray-200 text-gray-700',
         'general' => 'bg-gray-300 text-gray-800',
         'question' => 'bg-red-200 text-red-700',
         'job' => 'bg-blue-200 text-blue-700',
