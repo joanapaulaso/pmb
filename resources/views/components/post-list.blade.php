@@ -2,7 +2,7 @@
 
 @php
     $posts = collect($posts)->sortByDesc('created_at');
-    $tagColors = config('tags.colors'); // Assuming tag colors are in config/tags.php
+    $tagColors = config('tags.colors'); // Use colors from config
 
     if (!isset($selectedTags)) {
         $selectedTags = [];
@@ -20,8 +20,7 @@
                     class="tag-button inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold
                     {{ in_array($tag, $selectedTags) ? 'bg-gray-800 text-white' : $tagColors[$tag] }}"
                     data-tag="{{ $tag }}"
-                    data-original-styles="{{ $tagColors[$tag] }}"
-                    onclick="toggleTag(this, '{{ $tag }}')">
+                    data-original-styles="{{ $tagColors[$tag] }}">
                 #{{ $tag }}
             </button>
         @endforeach
@@ -137,8 +136,13 @@
 </div>
 
 <script>
-const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-function toggleTag(element, tag) {
+// Definindo essas variáveis no escopo global para garantir que elas estejam disponíveis
+window.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+// Store tag colors in a JavaScript variable
+window.tagColors = @json($tagColors);
+
+// Definindo toggleTag no escopo global (window)
+window.toggleTag = function(element, tag) {
     const selectedTagsInput = document.getElementById('selected-tags');
     let selectedTags = selectedTagsInput.value ? selectedTagsInput.value.split(',') : [];
 
@@ -167,9 +171,11 @@ function toggleTag(element, tag) {
         if (selectedTags.includes('all')) {
             selectedTags = selectedTags.filter(t => t !== 'all');
             const allBtn = document.querySelector('.tag-button[data-tag="all"]');
-            allBtn.classList.remove('bg-gray-800', 'text-white');
-            const originalStyles = allBtn.getAttribute('data-original-styles');
-            originalStyles.split(' ').forEach(cls => allBtn.classList.add(cls));
+            if (allBtn) {
+                allBtn.classList.remove('bg-gray-800', 'text-white');
+                const originalStyles = allBtn.getAttribute('data-original-styles');
+                originalStyles.split(' ').forEach(cls => allBtn.classList.add(cls));
+            }
         }
 
         if (selectedTags.includes(tag)) {
@@ -186,13 +192,13 @@ function toggleTag(element, tag) {
 
     selectedTagsInput.value = selectedTags.join(',');
     fetchPosts(selectedTags);
-}
+};
 
 function fetchPosts(tags) {
     fetch('{{ route('dashboard') }}', {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': csrfToken,
+            'X-CSRF-TOKEN': window.csrfToken,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
@@ -215,11 +221,18 @@ function updatePosts(posts) {
 
         let tagsHtml = '';
         if (post.tag) {
-            tagsHtml += `<span class="inline-block ${post.tag_color} rounded-full px-3 py-1 text-xs font-semibold">#${post.tag}</span>`;
+            const tagColor = post.tag_colors && post.tag_colors[post.tag]
+                ? post.tag_colors[post.tag]
+                : window.tagColors[post.tag] || 'bg-gray-200 text-gray-700';
+            tagsHtml += `<span class="inline-block ${tagColor} rounded-full px-3 py-1 text-xs font-semibold">#${post.tag}</span>`;
         }
+
         if (post.additional_tags && Array.isArray(post.additional_tags)) {
             post.additional_tags.forEach(tag => {
-                tagsHtml += `<span class="inline-block ${post.tag_colors[tag] || 'bg-gray-200 text-gray-700'} rounded-full px-3 py-1 text-xs font-semibold">#${tag}</span>`;
+                const tagColor = post.tag_colors && post.tag_colors[tag]
+                    ? post.tag_colors[tag]
+                    : window.tagColors[tag] || 'bg-gray-200 text-gray-700';
+                tagsHtml += `<span class="inline-block ${tagColor} rounded-full px-3 py-1 text-xs font-semibold">#${tag}</span>`;
             });
         }
 
@@ -248,7 +261,7 @@ function updatePosts(posts) {
             <p class="text-sm text-gray-500">${post.created_at_diff}</p>
             ${post.can_delete ? `
                 <form action="/posts/${post.id}" method="POST" class="inline">
-                    <input type="hidden" name="_token" value="${csrfToken}">
+                    <input type="hidden" name="_token" value="${window.csrfToken}">
                     <input type="hidden" name="_method" value="DELETE">
                     <button type="submit" class="text-red-500">Delete</button>
                 </form>
@@ -256,8 +269,8 @@ function updatePosts(posts) {
             <div x-data="{ showReply: false, replying: false }">
                 <button @click="showReply = !showReply" class="text-blue-500">Reply</button>
                 <div x-show="showReply" class="mt-2">
-                    <form onsubmit="event.preventDefault(); submitReply(this, '${post.reply_url}', ${post.id});">
-                        <input type="hidden" name="_token" value="${csrfToken}">
+                    <form onsubmit="event.preventDefault(); window.submitReply(this, '${post.reply_url}', ${post.id});">
+                        <input type="hidden" name="_token" value="${window.csrfToken}">
                         <textarea name="content" rows="2" class="w-full border rounded p-2" placeholder="Reply to this post"></textarea>
                         <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded" :disabled="replying">Reply</button>
                     </form>
@@ -284,7 +297,7 @@ function updatePosts(posts) {
                         <p class="text-sm text-gray-500">${reply.created_at_diff}</p>
                         ${reply.can_delete ? `
                             <form action="/replies/${reply.id}" method="POST" class="inline">
-                                <input type="hidden" name="_token" value="${csrfToken}">
+                                <input type="hidden" name="_token" value="${window.csrfToken}">
                                 <input type="hidden" name="_method" value="DELETE">
                                 <button type="submit" class="text-red-500">Delete</button>
                             </form>
@@ -298,18 +311,16 @@ function updatePosts(posts) {
     });
 }
 
-// Re-use the existing submitReply function from your original script
-function submitReply(form, actionUrl, postId) {
+// Definindo submitReply no escopo global
+window.submitReply = function(form, actionUrl, postId) {
     const submitButton = form.querySelector('button[type="submit"]');
     submitButton.disabled = true;
-
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
     fetch(actionUrl, {
         method: 'POST',
         body: new FormData(form),
         headers: {
-            'X-CSRF-TOKEN': csrfToken,
+            'X-CSRF-TOKEN': window.csrfToken,
             'Accept': 'application/json'
         }
     })
@@ -329,9 +340,9 @@ function submitReply(form, actionUrl, postId) {
     })
     .catch(error => console.error('Error:', error))
     .finally(() => submitButton.disabled = false);
-}
+};
 
-// Re-use the existing updateReplyUI function
+// Function to update the UI with a new reply
 function updateReplyUI(reply, postId) {
     const replyContainer = document.createElement('div');
     replyContainer.className = 'mb-4';
@@ -379,7 +390,17 @@ function updateReplyUI(reply, postId) {
     }
 }
 
+// Adicionar eventos de clique aos botões tag após o carregamento do DOM
 document.addEventListener('DOMContentLoaded', () => {
+    // Adicionar o onclick aos botões de tag
+    document.querySelectorAll('.tag-button').forEach(button => {
+        const tag = button.getAttribute('data-tag');
+        button.addEventListener('click', function() {
+            window.toggleTag(this, tag);
+        });
+    });
+
+    // Aplicar estilo aos botões de tag selecionados
     const selectedTagsInput = document.getElementById('selected-tags');
     if (selectedTagsInput && selectedTagsInput.value) {
         const selectedTags = selectedTagsInput.value.split(',').filter(Boolean);

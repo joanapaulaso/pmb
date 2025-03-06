@@ -24,8 +24,7 @@ class PostController extends Controller
         $tagColors = config('tags.colors');
         $query = Post::with(['user', 'replies.user'])
             ->whereNull('parent_id')
-            ->latest()
-            ->paginate(10);
+            ->latest();
         \Log::info('Query built');
         $selectedTags = $request->input('tags', []);
 
@@ -37,12 +36,15 @@ class PostController extends Controller
 
             if (!empty($selectedTags) && !in_array('all', $selectedTags)) {
                 $query->where(function ($q) use ($selectedTags) {
-                    $q->whereIn('tag', $selectedTags)
-                        ->orWhereJsonContains('additional_tags', $selectedTags);
+                    foreach ($selectedTags as $tag) {
+                        $q->where('tag', $tag)
+                            ->orWhereJsonContains('additional_tags', $tag);
+                    }
                 });
             }
 
-            $posts = $query->get()->map(function ($post) use ($tagColors) {
+            $postsQuery = clone $query;
+            $posts = $postsQuery->get()->map(function ($post) use ($tagColors) {
                 return [
                     'id' => $post->id,
                     'user' => [
@@ -54,7 +56,7 @@ class PostController extends Controller
                     'tag' => $post->tag,
                     'tag_color' => $tagColors[$post->tag] ?? 'bg-gray-200 text-gray-700',
                     'additional_tags' => $post->additional_tags ?? [],
-                    'tag_colors' => $tagColors,
+                    'tag_colors' => $tagColors, // Pass all tag colors
                     'metadata' => $post->metadata ?? [],
                     'created_at_diff' => $post->created_at->diffForHumans(),
                     'can_delete' => auth()->check() && auth()->user()->can('delete', $post),
@@ -76,9 +78,7 @@ class PostController extends Controller
                 ];
             });
 
-            return response()->json(['posts' => $posts, 'pagination' => $query->links()]);
-
-            \Log::info('Query executed', ['post_count' => $posts->count()]);
+            return response()->json(['posts' => $posts, 'pagination' => $query->paginate(10)->links()]);
         }
 
         if (!is_array($selectedTags)) {
@@ -88,17 +88,18 @@ class PostController extends Controller
 
         if (!empty($selectedTags) && !in_array('all', $selectedTags)) {
             $query->where(function ($q) use ($selectedTags) {
-                $q->whereIn('tag', $selectedTags)
-                    ->orWhereJsonContains('additional_tags', $selectedTags);
+                foreach ($selectedTags as $tag) {
+                    $q->where('tag', $tag)
+                        ->orWhereJsonContains('additional_tags', $tag);
+                }
             });
         }
 
-        $posts = $query->get();
+        $posts = $query->paginate(10);
         $tags = array_keys($tagColors);
 
-        return view('dashboard', compact('posts', 'tags', 'selectedTags'));
+        return view('dashboard', compact('posts', 'tags', 'selectedTags', 'tagColors'));
     }
-
     public function store(Request $request)
     {
         $validated = $request->validate([
