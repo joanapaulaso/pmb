@@ -87,7 +87,7 @@
                 @endcan
 
                 <div x-data="{ showReply: false, replying: false }">
-                    <button @click="showReply = !showReply" class="text-blue-500">Reply</button>
+                    <button @click="showReply = !showReply" class="text-blue-500">Responder</button>
                     <div x-show="showReply" class="mt-2">
                         <form @submit.prevent="submitReply($event, '{{ route('posts.reply', $post) }}', {{ $post->id }})">
                             @csrf
