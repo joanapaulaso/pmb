@@ -63,11 +63,33 @@
                         </div>
                     </div>
 
-                    <!-- Detalhes do laboratório selecionado -->
+                    <!-- Detalhes do laboratório selecionado (importante manter esta seção) -->
                     <div id="lab-details" class="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200 hidden">
                         <h3 id="lab-detail-name" class="text-lg font-medium text-gray-900 mb-2"></h3>
                         <p id="lab-detail-address" class="text-sm text-gray-600 mb-4"></p>
-                        <!-- Detalhes do laboratório... -->
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <h4 class="text-sm font-semibold mb-1">Localização</h4>
+                                <p id="lab-detail-location" class="text-sm"></p>
+                            </div>
+
+                            <div>
+                                <h4 class="text-sm font-semibold mb-1">Contato</h4>
+                                <p id="lab-detail-contact" class="text-sm"></p>
+                            </div>
+
+                            <div>
+                                <h4 class="text-sm font-semibold mb-1">Horário</h4>
+                                <p id="lab-detail-hours" class="text-sm"></p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex space-x-4">
+                            <a href="#" id="lab-detail-website" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm hidden">Visitar website</a>
+                            <a href="#" id="lab-detail-directions" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm hidden">Como chegar</a>
+                            <a href="#" id="lab-detail-view" class="text-indigo-600 hover:text-indigo-800 text-sm">Ver perfil completo</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -98,7 +120,6 @@
         // Inicialização do mapa
         async function initMap() {
             try {
-                // Aguardar pela definição do componente do mapa
                 await customElements.whenDefined('gmp-map');
                 console.log('Componente gmp-map definido');
 
@@ -127,25 +148,17 @@
 
                 console.log('Mapa interno inicializado');
 
-                // Configurar mapa com mais controles
+                // Configurar mapa
                 map.innerMap.setOptions({
                     mapTypeControl: true,
                     streetViewControl: true,
                     fullscreenControl: true,
-                    zoomControl: true,
-                    styles: [
-                        {
-                            featureType: "poi",
-                            elementType: "labels",
-                            stylers: [{ visibility: "on" }]
-                        }
-                    ]
+                    zoomControl: true
                 });
 
                 // Criar infoWindow com estilo personalizado
                 infoWindow = new google.maps.InfoWindow({
-                    maxWidth: 300,
-                    pixelOffset: new google.maps.Size(0, -30)
+                    maxWidth: 300
                 });
 
                 // Verificar se temos laboratórios com coordenadas
@@ -221,14 +234,14 @@
 
                         // Adicionar evento de clique
                         marker.addListener('click', () => {
+                            // Mostrar detalhes abaixo do mapa
                             showLabDetails(lab);
+
+                            // Mostrar info window
                             infoWindow.setContent(
                                 `<div class="p-3 min-w-[200px]">
                                     <h3 class="font-bold text-base">${lab.name}</h3>
                                     <p class="text-sm mt-1">${lab.address || 'Endereço não informado'}</p>
-                                    <div class="mt-2">
-                                        <a href="/teams/${lab.id}" class="text-blue-600 hover:text-blue-800 text-xs">Ver detalhes</a>
-                                    </div>
                                 </div>`
                             );
                             infoWindow.open(map.innerMap, marker);
@@ -257,9 +270,8 @@
                     setTimeout(() => {
                         map.innerMap.fitBounds(bounds);
 
-                        // Limitar o zoom máximo para não aproximar demais quando há apenas um marcador
                         if (markers.length === 1) {
-                            map.innerMap.setZoom(Math.min(15, map.innerMap.getZoom()));
+                            map.innerMap.setZoom(15);
                         }
                     }, 300);
                 } else {
@@ -273,26 +285,6 @@
             }
         }
 
-        // Função para criar o conteúdo visual do marcador
-        function buildMarkerContent(lab) {
-            // Criar um elemento para o marcador personalizado
-            const element = document.createElement('div');
-
-            // Definir a aparência do pin - mais chamativo e visível
-            element.innerHTML = `
-                <div class="marker-container" style="cursor: pointer; width: 30px; height: 40px; position: relative;">
-                    <svg viewBox="0 0 24 24" width="30" height="40" fill="#4F46E5">
-                        <path d="M12 0C7.31 0 3.5 3.81 3.5 8.5c0 5.25 8.5 15.5 8.5 15.5s8.5-10.25 8.5-15.5C20.5 3.81 16.69 0 12 0zm0 13a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/>
-                    </svg>
-                    <div class="marker-label" style="position: absolute; top: 7px; left: 0; width: 100%; color: white; font-size: 10px; font-weight: bold; text-align: center;">
-                        ${lab.id}
-                    </div>
-                </div>
-            `;
-
-            return element;
-        }
-
         // Limpar marcadores existentes
         function clearMarkers() {
             markers.forEach(marker => {
@@ -301,6 +293,70 @@
             markers = [];
             console.log('Marcadores removidos');
         }
+
+        // Mostrar detalhes do laboratório selecionado
+        function showLabDetails(lab) {
+            try {
+                const detailContainer = document.getElementById('lab-details');
+
+                // Preencher os detalhes
+                document.getElementById('lab-detail-name').textContent = lab.name;
+                document.getElementById('lab-detail-address').textContent = lab.address || 'Endereço não informado';
+
+                // Localização
+                let locationText = '';
+                if (lab.details.building) locationText += `Prédio: ${lab.details.building}<br>`;
+                if (lab.details.floor) locationText += `Andar: ${lab.details.floor}<br>`;
+                if (lab.details.room) locationText += `Sala: ${lab.details.room}<br>`;
+                if (lab.details.department) locationText += `Departamento: ${lab.details.department}<br>`;
+                if (lab.details.campus) locationText += `Campus: ${lab.details.campus}`;
+                document.getElementById('lab-detail-location').innerHTML = locationText || 'Informações não disponíveis';
+
+                // Contato
+                let contactText = '';
+                if (lab.details.phone) contactText += `Telefone: ${lab.details.phone}<br>`;
+                if (lab.details.contact_email) contactText += `Email: ${lab.details.contact_email}`;
+                document.getElementById('lab-detail-contact').innerHTML = contactText || 'Informações não disponíveis';
+
+                // Horário
+                document.getElementById('lab-detail-hours').textContent = lab.details.working_hours || 'Não informado';
+
+                // Links
+                const websiteLink = document.getElementById('lab-detail-website');
+                if (lab.details.website) {
+                    websiteLink.href = lab.details.website;
+                    websiteLink.classList.remove('hidden');
+                } else {
+                    websiteLink.classList.add('hidden');
+                }
+
+                // Link para direções
+                const directionsLink = document.getElementById('lab-detail-directions');
+                if (lab.coordinates) {
+                    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lab.coordinates.lat},${lab.coordinates.lng}`;
+                    directionsLink.href = directionsUrl;
+                    directionsLink.classList.remove('hidden');
+                } else {
+                    directionsLink.classList.add('hidden');
+                }
+
+                // Link para perfil completo
+                document.getElementById('lab-detail-view').href = `/teams/${lab.id}`;
+
+                // Mostrar o container
+                detailContainer.classList.remove('hidden');
+
+                // Rolar a página para os detalhes
+                setTimeout(() => {
+                    detailContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+
+                console.log('Detalhes do laboratório exibidos:', lab.name);
+            } catch (error) {
+                console.error('Erro ao mostrar detalhes do laboratório:', error);
+            }
+        }
+
 
         // Aplicar filtros aos laboratórios
         function applyFilters() {
