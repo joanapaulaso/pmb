@@ -14,6 +14,9 @@
                     <x-nav-link href="{{ route('membros') }}" :active="request()->routeIs('membros')">
                         {{ __('Membros') }}
                     </x-nav-link>
+                        <x-nav-link href="{{ route('labs.map') }}" :active="request()->routeIs('labs.map')">
+                        {{ __('Mapa de Laboratórios') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -164,6 +167,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('membros') }}" :active="request()->routeIs('membros')">
                 {{ __('Membros') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link href="{{ route('labs.map') }}" :active="request()->routeIs('labs.map')">
+                {{ __('Mapa de Laboratórios') }}
             </x-responsive-nav-link>
         </div>
 

@@ -7,57 +7,83 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\DropdownController;
 use App\Http\Controllers\TeamController;
-use App\Models\Post;
+use App\Http\Controllers\LabsMapController;
+use App\Http\Controllers\DashboardController;
 use App\Livewire\RegisterComponent;
 
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Aqui é onde você pode registrar as rotas da web para sua aplicação.
+| Estas rotas são carregadas pelo RouteServiceProvider dentro de um grupo
+| que contém o middleware "web".
+|
+*/
+
+// Rotas públicas - acessíveis sem autenticação
 Route::get('/', function () {
     return view('welcome');
-});
+})->name('welcome');
 
-// Rota para o registro usando Livewire, apenas para usuários não autenticados
+// Rotas para usuários convidados (não autenticados)
 Route::middleware('guest')->group(function () {
     Route::get('/register', RegisterComponent::class)->name('register');
 });
 
-// Rotas protegidas por autenticação
-Route::middleware([
+// Definição dos middlewares comuns para rotas autenticadas
+$authMiddleware = [
     'auth:sanctum',
     config('jetstream.auth_session'),
     'verified',
-])->group(function () {
-    // Rota unificada para o dashboard
-    Route::match(['get', 'post'], '/dashboard', function (Request $request) {
-        $tags = ['all', 'general', 'question', 'job', 'promotion', 'idea', 'collaboration', 'news', 'paper'];
-        $posts = Post::all(); // Pode ser ajustado para filtragem no PostController se necessário
-        $selectedTags = $request->input('tags', []);
+];
 
-        if ($request->isMethod('post')) {
-            // Lógica adicional para POST, como filtragem, pode ser delegada ao PostController
-            return app(PostController::class)->index($request);
-        }
+// Rotas protegidas por autenticação
+Route::middleware($authMiddleware)->group(function () {
+    // Grupo de rotas do Dashboard
+    Route::controller(DashboardController::class)->group(function () {
+        Route::get('/dashboard', 'index')->name('dashboard');
+        Route::post('/dashboard', 'filter')->name('dashboard.filter');
+    });
 
-        return view('dashboard', compact('posts', 'tags', 'selectedTags'));
-    })->name('dashboard');
+    // Grupo de rotas de Usuários
+    Route::controller(UserController::class)->group(function () {
+        Route::get('/membros', 'index')->name('membros');
+    });
 
-    // Outras rotas autenticadas
-    Route::get('/membros', [UserController::class, 'index'])->name('membros');
-    Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
-    Route::post('/posts/{post}/reply', [PostController::class, 'reply'])->name('posts.reply');
-    Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
-    Route::delete('/replies/{reply}', [PostController::class, 'destroyReply'])->name('replies.destroy');
-    Route::get('/profile/{user}', [PublicProfileController::class, 'show'])->name('public.profile');
+    // Grupo de rotas para Perfis Públicos
+    Route::controller(PublicProfileController::class)->group(function () {
+        Route::get('/profile/{user}', 'show')->name('public.profile');
+    });
 
+    // Grupo de rotas para Posts
+    Route::controller(PostController::class)->group(function () {
+        Route::post('/posts', 'store')->name('posts.store');
+        Route::post('/posts/{post}/reply', 'reply')->name('posts.reply');
+        Route::delete('/posts/{post}', 'destroy')->name('posts.destroy');
+        Route::delete('/replies/{reply}', 'destroyReply')->name('replies.destroy');
+    });
+
+    // Grupo de rotas para Times/Equipes
+    Route::controller(TeamController::class)->group(function () {
+        Route::get('/teams/{team}/settings', 'show')->name('teams.show');
+    });
+
+    // Grupo de rotas para o Mapa de Laboratórios
+    Route::controller(LabsMapController::class)->prefix('labs')->name('labs.')->group(function () {
+        Route::get('/map', 'index')->name('map');
+    });
+
+    // Rota de API para dados dos laboratórios
+    Route::get('/api/labs', [LabsMapController::class, 'getLabsData'])->name('api.labs');
 });
 
-Route::group(['middleware' => ['auth', 'verified']], function () {
-    Route::get('/teams/{team}/settings', [TeamController::class, 'show'])->name('teams.show');
-});
-
-// Rotas para dropdowns
-Route::middleware(['web'])->group(function () {
-    Route::get('/get-countries', [DropdownController::class, 'getCountries']);
-    Route::get('/get-states', [DropdownController::class, 'getStates']);
-    Route::get('/get-municipalities/{state_id}', [DropdownController::class, 'getMunicipalities']);
-    Route::get('/get-institutions/{state_id}', [DropdownController::class, 'getInstitutions']);
-    Route::get('/get-laboratories/{institution_id?}', [DropdownController::class, 'getLaboratories']);
+// Rotas para dropdowns que precisam apenas do middleware 'web'
+Route::middleware('web')->controller(DropdownController::class)->prefix('dropdown')->name('dropdown.')->group(function () {
+    Route::get('/countries', 'getCountries')->name('countries');
+    Route::get('/states', 'getStates')->name('states');
+    Route::get('/municipalities/{state_id}', 'getMunicipalities')->name('municipalities');
+    Route::get('/institutions/{state_id}', 'getInstitutions')->name('institutions');
+    Route::get('/laboratories/{institution_id?}', 'getLaboratories')->name('laboratories');
 });

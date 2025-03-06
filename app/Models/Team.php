@@ -20,7 +20,30 @@ class Team extends JetstreamTeam
     protected $fillable = [
         'name',
         'personal_team',
-        'address'
+        'address',
+        'latitude',
+        'longitude',
+        // Campos de localização física
+        'building',
+        'floor',
+        'room',
+        // Informações de contato
+        'phone',
+        'contact_email',
+        'contact_person',
+        // Informações complementares
+        'complement',
+        'reference_point',
+        'postal_code',
+        // Informações operacionais
+        'working_hours',
+        'website',
+        'has_accessibility',
+        // Campo para observações
+        'address_notes',
+        // Campos adicionais
+        'department',
+        'campus',
     ];
 
     /**
@@ -35,7 +58,7 @@ class Team extends JetstreamTeam
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
      * @return array<string, string>
      */
@@ -43,6 +66,9 @@ class Team extends JetstreamTeam
     {
         return [
             'personal_team' => 'boolean',
+            'has_accessibility' => 'boolean',
+            'latitude' => 'float',
+            'longitude' => 'float',
         ];
     }
 
@@ -60,5 +86,63 @@ class Team extends JetstreamTeam
     public function owner()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get the full formatted address with complement.
+     *
+     * @return string
+     */
+    public function getFormattedAddressAttribute()
+    {
+        $parts = [$this->address];
+
+        if ($this->complement) {
+            $parts[] = $this->complement;
+        }
+
+        if ($this->building) {
+            $parts[] = "Prédio: {$this->building}";
+        }
+
+        if ($this->floor) {
+            $parts[] = "Andar: {$this->floor}";
+        }
+
+        if ($this->room) {
+            $parts[] = "Sala: {$this->room}";
+        }
+
+        return implode(', ', array_filter($parts));
+    }
+
+    /**
+     * Verifica se o modelo tem coordenadas geográficas válidas
+     *
+     * @return bool
+     */
+    public function hasValidCoordinates()
+    {
+        return !is_null($this->latitude) &&
+            !is_null($this->longitude) &&
+            $this->latitude != 0 &&
+            $this->longitude != 0;
+    }
+
+    /**
+     * Retorna as coordenadas como um array
+     *
+     * @return array|null
+     */
+    public function getCoordinates()
+    {
+        if ($this->hasValidCoordinates()) {
+            return [
+                'lat' => (float) $this->latitude,
+                'lng' => (float) $this->longitude
+            ];
+        }
+
+        return null;
     }
 }

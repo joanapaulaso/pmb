@@ -20,11 +20,13 @@ class PostController extends Controller
 
     public function index(Request $request)
     {
+        \Log::info('Starting index method');
         $tagColors = config('tags.colors');
         $query = Post::with(['user', 'replies.user'])
             ->whereNull('parent_id')
-            ->latest();
-
+            ->latest()
+            ->paginate(10);
+        \Log::info('Query built');
         $selectedTags = $request->input('tags', []);
 
         if ($request->isMethod('post') && $request->expectsJson()) {
@@ -74,7 +76,9 @@ class PostController extends Controller
                 ];
             });
 
-            return response()->json(['posts' => $posts]);
+            return response()->json(['posts' => $posts, 'pagination' => $query->links()]);
+
+            \Log::info('Query executed', ['post_count' => $posts->count()]);
         }
 
         if (!is_array($selectedTags)) {
