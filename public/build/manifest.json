@@ -1,11 +1,11 @@
 {
   "resources/css/app.css": {
-    "file": "assets/appCss-CuFUGRDC.css",
+    "file": "assets/appCss-DF_2IL6C.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
   "resources/css/quill.snow.css": {
-    "file": "assets/quill-BjJRTKNk.css",
+    "file": "assets/quill-DySQmSSv.css",
     "src": "resources/css/quill.snow.css",
     "isEntry": true
   },
@@ -86,7 +86,7 @@
     "src": "resources/images/mass_spec_detail_00.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-AlOVNr8I.js",
+    "file": "assets/app-BpwDnPKF.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
