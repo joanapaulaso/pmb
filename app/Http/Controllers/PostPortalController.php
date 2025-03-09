@@ -331,13 +331,17 @@ class PostPortalController extends Controller
         }
 
         // Remover pontos após as tags de imagem
-        $html = preg_replace('/<img([^>]*)>\s*\.\s*/', '<img$1>', $html);
+        $html = preg_replace('/<img[^>]*>(\s*)<a[^>]*>([^<]*)<\/a>/', '<img$1>', $html);
 
         // Remover qualquer menção a localhost como um link (mantendo o texto)
         $html = preg_replace('/<a[^>]*localhost[^>]*>([^<]*)<\/a>/', '$1', $html);
 
         // Remover cores e estilos de qualquer texto que contenha apenas um ponto
         $html = preg_replace('/<([a-z]+)[^>]*>\s*\.\s*<\/\1>/', '.', $html);
+
+        // Remove links com aspas extras
+        $html = str_replace('href=""', 'href="', $html);
+        $html = str_replace('">', '">', $html);
 
         // Corrigir problema em que a imagem pode estar dentro de tags extras
         $pattern = '/<([a-z]+)[^>]*>\s*(<img[^>]*>)\s*<\/\1>/i';
