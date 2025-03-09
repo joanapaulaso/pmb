@@ -9,13 +9,13 @@
 <div x-data="postForm()" class="mb-10">
     @if (isset($post))
         <!-- Reply form remains unchanged -->
-        <form action="{{ route('posts.reply', $post) }}" method="POST">
+        <form action="{{ route('posts-portal.reply', $post) }}" method="POST">
             @csrf
             <textarea name="content" rows="2" class="w-full border border-gray-200 rounded-lg p-3 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200" placeholder="Reply to this post"></textarea>
             <button type="submit" class="mt-3 px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm shadow-sm transition-all duration-200">Reply</button>
         </form>
     @else
-        <form action="{{ route('posts.store') }}" method="POST" x-ref="postForm" enctype="multipart/form-data">
+        <form action="{{ route('posts-portal.store') }}" method="POST" x-ref="postForm" enctype="multipart/form-data">
             @csrf
 
             <!-- Hidden field to store Quill content -->
@@ -156,78 +156,111 @@
 </div>
 
 <script>
-    function postForm() {
-        return {
-            open: false,
-            selectedTags: [],
-            quill: null,
-            tagColors: @json($tagColors), // Use the colors from the config
 
-            // Initialize
-            init() {
-                // Initialize Quill after Alpine component is mounted
-                this.$nextTick(() => {
-                    this.initQuill();
-                });
-            },
+function postForm() {
+    return {
+        open: false,
+        selectedTags: [],
+        quill: null,
+        tagColors: @json($tagColors), // Use the colors from the config
 
-            // Initialize Quill editor
-            initQuill() {
-                if (typeof Quill === 'undefined') {
-                    console.error('Quill is not loaded');
-                    return;
-                }
+        // Initialize
+        init() {
+            // Initialize Quill after Alpine component is mounted
+            this.$nextTick(() => {
+                this.initQuill();
+            });
+        },
 
-                // Use a função global para inicializar o Quill com suporte a uploads
-                this.quill = window.initQuillWithImageUpload('#quill-editor', '#quill-toolbar', {
-                    placeholder: 'Escreva seu post...',
-                    modules: {
-                        toolbar: '#quill-toolbar',
-                        imageUploader: {
-                            url: '{{ route('upload.image') }}',
-                            csrfToken: '{{ csrf_token() }}'
-                        }
-                    }
-                });
-            },
-
-            // Submit form with Quill content
-            submitForm() {
-                if (this.quill) {
-                    // Get content from Quill and set it to hidden input
-                    const content = this.quill.root.innerHTML;
-                    this.$refs.contentInput.value = content;
-
-                    // Submit the form
-                    this.$refs.postForm.submit();
-                }
-            },
-
-            // Tag functions
-            toggle() {
-                this.open = !this.open;
-            },
-            close() {
-                this.open = false;
-            },
-            toggleTag(tag) {
-                if (this.isTagSelected(tag)) {
-                    this.removeTag(tag);
-                } else {
-                    this.addTag(tag);
-                }
-            },
-            addTag(tag) {
-                if (this.selectedTags.length < 3 && !this.selectedTags.includes(tag)) {
-                    this.selectedTags.push(tag);
-                }
-            },
-            removeTag(tag) {
-                this.selectedTags = this.selectedTags.filter(t => t !== tag);
-            },
-            isTagSelected(tag) {
-                return this.selectedTags.includes(tag);
+        // Initialize Quill editor
+        initQuill() {
+            if (typeof Quill === 'undefined') {
+                console.error('Quill is not loaded');
+                return;
             }
+
+            // Use the global function to initialize Quill with upload support
+            this.quill = window.initQuillWithImageUpload('#quill-editor', '#quill-toolbar', {
+                placeholder: 'Escreva seu post...',
+                modules: {
+                    toolbar: '#quill-toolbar',
+                    imageUploader: {
+                        url: '{{ route('upload.image') }}',
+                        csrfToken: '{{ csrf_token() }}'
+                    }
+                }
+            });
+
+            // Add a handler for image uploads
+            if (this.quill) {
+                const quillInstance = this.quill;
+
+                // When an image is uploaded, make sure the form knows content has changed
+                this.quill.root.addEventListener('input', function() {
+                    console.log('Quill content changed');
+                });
+            }
+        },
+
+        // Submit form with Quill content
+        submitForm() {
+            console.log('Submit form triggered');
+
+            if (!this.quill) {
+                console.error('Quill editor not initialized');
+                return;
+            }
+
+            // Check if a tag is selected
+            if (this.selectedTags.length === 0) {
+                alert('Por favor, selecione pelo menos uma tag para seu post.');
+                return;
+            }
+
+            try {
+                // Get content from Quill and set it to hidden input
+                const content = this.quill.root.innerHTML;
+                console.log('Quill content retrieved:', content.substring(0, 100) + '...');
+
+                // Set the content to the hidden input
+                this.$refs.contentInput.value = content;
+
+                console.log('Content set to hidden input, submitting form');
+
+                // Submit the form
+                this.$refs.postForm.submit();
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                alert('Ocorreu um erro ao enviar o post. Por favor, tente novamente.');
+            }
+        },
+
+        // Tag functions
+        toggle() {
+            this.open = !this.open;
+        },
+        close() {
+            this.open = false;
+        },
+        toggleTag(tag) {
+            if (this.isTagSelected(tag)) {
+                this.removeTag(tag);
+            } else {
+                this.addTag(tag);
+            }
+        },
+        addTag(tag) {
+            if (this.selectedTags.length < 3 && !this.selectedTags.includes(tag)) {
+                this.selectedTags.push(tag);
+            }
+        },
+        removeTag(tag) {
+            this.selectedTags = this.selectedTags.filter(t => t !== tag);
+        },
+        isTagSelected(tag) {
+            return this.selectedTags.includes(tag);
         }
     }
+}
+
 </script>

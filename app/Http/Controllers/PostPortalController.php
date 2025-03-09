@@ -1,16 +1,16 @@
 <?php
 
-// In your PostController
+// In your PostPortalController
 namespace App\Http\Controllers;
 
-use App\Models\Post;
+use App\Models\PostPortal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use App\Http\Controllers\Controller;
 use App\Services\LinkPreviewService;
 use Illuminate\Support\Str;
 
-class PostController extends Controller
+class PostPortalController extends Controller
 {
     protected $linkPreviewService;
 
@@ -23,7 +23,7 @@ class PostController extends Controller
     {
         \Log::info('Starting index method');
         $tagColors = config('tags.colors');
-        $query = Post::with(['user', 'replies.user'])
+        $query = PostPortal::with(['user', 'replies.user'])
             ->whereNull('parent_id')
             ->latest();
         \Log::info('Query built');
@@ -61,7 +61,7 @@ class PostController extends Controller
                     'metadata' => $post->metadata ?? [],
                     'created_at_diff' => $post->created_at->diffForHumans(),
                     'can_delete' => auth()->check() && auth()->user()->can('delete', $post),
-                    'reply_url' => route('posts.reply', $post),
+                    'reply_url' => route('posts-portal.reply', $post),
                     'replies' => $post->replies->map(function ($reply) use ($tagColors) {
                         return [
                             'id' => $reply->id,
@@ -99,7 +99,7 @@ class PostController extends Controller
         $posts = $query->paginate(10);
         $tags = array_keys($tagColors);
 
-        return view('dashboard', compact('posts', 'tags', 'selectedTags', 'tagColors'));
+        return view('portal', compact('posts', 'tags', 'selectedTags', 'tagColors'));
     }
 
     /**
@@ -107,87 +107,125 @@ class PostController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'content' => 'required|max:5000',
-            'tag' => 'required|in:general,question,job,promotion,idea,collaboration,news,paper',
-            'additional_tags' => 'sometimes|array|max:2',
-            'additional_tags.*' => 'in:general,question,job,promotion,idea,collaboration,news,paper'
+        // Add detailed logging
+        \Log::info('Post submission attempt', [
+            'user_id' => $request->user()->id,
+            'content_length' => strlen($request->input('content')),
+            'tag' => $request->input('tag'),
+            'additional_tags' => $request->input('additional_tags')
         ]);
 
-        // Sanitize HTML content
-        $content = $this->sanitizeHtml($validated['content']);
-
-        $metadata = [];
-
         try {
-            // Extrair URLs do conteúdo HTML, excluindo localhost
-            $shouldExtractLink = false;
-            $url = null;
+            $validated = $request->validate([
+                'content' => 'required|max:10000', // Increased max size to handle HTML with images
+                'tag' => 'required|in:general,question,job,promotion,idea,collaboration,news,paper',
+                'additional_tags' => 'sometimes|array|max:2',
+                'additional_tags.*' => 'in:general,question,job,promotion,idea,collaboration,news,paper'
+            ]);
 
-            // Procurar URLs no conteúdo que não sejam localhost
-            if (preg_match('/\bhttps?:\/\/(?!localhost)\S+/i', $content, $match)) {
-                $url = $match[0]; // URL encontrada no texto
-                $shouldExtractLink = true;
-            } elseif (preg_match('/href=["\']([^"\']+)["\']/i', $content, $match)) {
-                $possibleUrl = $match[1];
-                // Verificar se não é localhost
-                if (strpos($possibleUrl, 'localhost') === false) {
-                    $url = $possibleUrl;
+            // Log validation success
+            \Log::info('Post validation passed');
+
+            // Sanitize HTML content
+            $content = $this->sanitizeHtml($validated['content']);
+
+            // Log content after sanitization
+            \Log::info('Content sanitized', [
+                'content_length' => strlen($content),
+                'contains_image' => strpos($content, '<img') !== false
+            ]);
+
+            $metadata = [];
+
+            try {
+                // Extract URLs from HTML content, excluding localhost
+                $shouldExtractLink = false;
+                $url = null;
+
+                // Look for URLs in the content that aren't localhost
+                if (preg_match('/\bhttps?:\/\/(?!localhost)\S+/i', $content, $match)) {
+                    $url = $match[0]; // URL found in text
                     $shouldExtractLink = true;
+                } elseif (preg_match('/href=["\']([^"\']+)["\']/i', $content, $match)) {
+                    $possibleUrl = $match[1];
+                    // Check if not localhost
+                    if (strpos($possibleUrl, 'localhost') === false) {
+                        $url = $possibleUrl;
+                        $shouldExtractLink = true;
+                    }
                 }
+
+                // Only extract metadata if it's a valid URL and not localhost
+                if ($shouldExtractLink && $url) {
+                    // Use try-catch specific to the link preview service
+                    try {
+                        $metadata = $this->linkPreviewService->getPreview($url);
+                        \Log::info('Preview obtained successfully', ['url' => $url]);
+                    } catch (\Exception $e) {
+                        \Log::error('Error getting link preview', [
+                            'url' => $url,
+                            'error' => $e->getMessage()
+                        ]);
+
+                        // Use a default preview in case of error
+                        $metadata = [
+                            'url' => $url,
+                            'title' => parse_url($url, PHP_URL_HOST) ?: 'Link',
+                            'description' => 'Could not load information for this link'
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error processing URL in content', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                // Continue without metadata in case of error
             }
 
-            // Só extrair metadados se for uma URL válida e não for localhost
-            if ($shouldExtractLink && $url) {
-                // Usar try-catch específico para o serviço de link preview
-                try {
-                    $metadata = $this->linkPreviewService->getPreview($url);
-                    \Log::info('Preview obtido com sucesso', ['url' => $url]);
-                } catch (\Exception $e) {
-                    \Log::error('Erro ao obter preview do link', [
-                        'url' => $url,
-                        'error' => $e->getMessage()
-                    ]);
+            try {
+                // Create the post with additional tags
+                $post = $request->user()->portalPosts()->create([
+                    'content' => $content,
+                    'tag' => $validated['tag'],
+                    'additional_tags' => $request->input('additional_tags', []),
+                    'metadata' => $metadata
+                ]);
 
-                    // Usar um preview padrão em caso de erro
-                    $metadata = [
-                        'url' => $url,
-                        'title' => parse_url($url, PHP_URL_HOST) ?: 'Link',
-                        'description' => 'Não foi possível carregar informações deste link'
-                    ];
-                }
+                \Log::info('Post created successfully', ['post_id' => $post->id]);
+
+                return redirect()->route('portal')->with('success', 'Post created successfully');
+            } catch (\Exception $e) {
+                \Log::error('Error saving post', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'sql' => isset($e->getSql) ? $e->getSql() : 'N/A'
+                ]);
+
+                return redirect()->route('portal')
+                    ->with('error', 'An error occurred while saving your post. Please try again.');
             }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Post validation failed', [
+                'errors' => $e->errors()
+            ]);
+
+            return redirect()->route('portal')
+                ->withErrors($e->errors())
+                ->withInput();
         } catch (\Exception $e) {
-            \Log::error('Erro ao processar URL no conteúdo', [
+            \Log::error('Unexpected error in post creation', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            // Continuar sem metadata em caso de erro
-        }
 
-        try {
-            // Create the post with additional tags
-            $post = $request->user()->posts()->create([
-                'content' => $content,
-                'tag' => $validated['tag'],
-                'additional_tags' => $request->input('additional_tags', []),
-                'metadata' => $metadata
-            ]);
-
-            return redirect()->route('dashboard');
-        } catch (\Exception $e) {
-            \Log::error('Erro ao salvar post', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return redirect()->route('dashboard')
-                ->with('error', 'Ocorreu um erro ao salvar seu post. Por favor, tente novamente.');
+            return redirect()->route('portal')
+                ->with('error', 'An unexpected error occurred. Please try again.');
         }
     }
 
     // Handle replying to a post
-    public function reply(Request $request, Post $post)
+    public function reply(Request $request, PostPortal $post)
     {
         \Log::info('Reply attempt', ['user' => $request->user()->id, 'post' => $post->id, 'content' => $request->content]);
 
@@ -199,7 +237,7 @@ class PostController extends Controller
         $content = $this->sanitizeHtml($validated['content']);
 
         // Check if a reply with the same content was recently created
-        $existingReply = Post::where('parent_id', $post->id)
+        $existingReply = PostPortal::where('parent_id', $post->id)
             ->where('user_id', $request->user()->id)
             ->where('content', $content)
             ->where('created_at', '>', now()->subSeconds(5))
@@ -213,7 +251,7 @@ class PostController extends Controller
             ]);
         }
 
-        $reply = new Post();
+        $reply = new PostPortal();
         $reply->content = $content;
         $reply->user_id = $request->user()->id;
         $reply->parent_id = $post->id;
@@ -415,7 +453,7 @@ class PostController extends Controller
         return $this->cleanupHtml($stripped);
     }
 
-    public function destroy(Post $post)
+    public function destroy(PostPortal $post)
     {
         if (Gate::denies('delete', $post)) {
             abort(403);
@@ -425,8 +463,9 @@ class PostController extends Controller
 
         return redirect()->back()->with('success', 'Post deleted successfully');
     }
+
     // Handle reply deletion
-    public function destroyReply(Post $reply)
+    public function destroyReply(PostPortal $reply)
     {
         $this->authorize('delete', $reply);
         $reply->delete();

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\PostPortalController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\DropdownController;
 use App\Http\Controllers\TeamController;
@@ -48,10 +49,10 @@ Route::middleware($authMiddleware)->group(function () {
         Route::post('/dashboard', 'filter')->name('dashboard.filter');
     });
 
-    // Grupo de rotas do Portal
-    Route::get('/portal', [PortalController::class, 'index'])->name('portal');
-    Route::post('/portal', [PortalController::class, 'store'])->name('portal.store');
-    Route::patch('/portal/{post}/pin', [PortalController::class, 'togglePin'])->name('portal.pin');
+    Route::controller(PortalController::class)->group(function () {
+        Route::get('/portal', 'index')->name('portal');
+        Route::post('/portal', 'filter')->name('portal.filter');
+    });
 
     // Grupo de rotas de Usuários
     Route::controller(UserController::class)->group(function () {
@@ -71,6 +72,14 @@ Route::middleware($authMiddleware)->group(function () {
         Route::delete('/replies/{reply}', 'destroyReply')->name('replies.destroy');
     });
 
+    // Grupo de rotas para Posts
+    Route::controller(PostPortalController::class)->group(function () {
+        Route::post('/posts-portal', 'store')->name('posts-portal.store');
+        Route::post('/posts-portal/{post}/reply', 'reply')->name('posts-portal.reply');
+        Route::delete('/posts-portal/{post}', 'destroy')->name('posts-portal.destroy');
+        Route::delete('/replies-portal/{reply}', 'destroyReply')->name('replies-portal.destroy');
+    });
+
     // Grupo de rotas para Times/Equipes
     Route::controller(TeamController::class)->group(function () {
         Route::get('/teams/{team}/settings', 'show')->name('teams.show');
@@ -83,6 +92,10 @@ Route::middleware($authMiddleware)->group(function () {
 
     // Rota de API para dados dos laboratórios
     Route::get('/api/labs', [LabsMapController::class, 'getLabsData'])->name('api.labs');
+
+    Route::post('/upload-image', [App\Http\Controllers\ImageUploadController::class, 'upload'])
+        ->middleware(['auth'])
+        ->name('upload.image');
 });
 
 // Rotas para dropdowns que precisam apenas do middleware 'web'

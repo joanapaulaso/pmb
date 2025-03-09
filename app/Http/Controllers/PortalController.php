@@ -3,59 +3,135 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\PortalPost;
+use App\Models\PostPortal;
 
 class PortalController extends Controller
 {
-    public function index()
+    /**
+     * Exibe o dashboard com posts
+     *
+     * @param Request $request
+     * @return \Illuminate\View\View
+     */
+    public function index(Request $request)
     {
-        $posts = PortalPost::orderBy('pinned', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->get();
-        \Log::info('Posts carregados:', ['count' => $posts->count()]);
-        return view('portal', compact('posts'));
-    }
+        // Obter cores das tags da configuração
+        $tagColors = config('tags.colors', []);
+        $tags = array_keys($tagColors);
 
-    public function store(Request $request)
-    {
-        if (!auth()->check()) {
-            \Log::warning('Usuário não autenticado ao tentar salvar post.');
-            return redirect()->route('login')->with('error', 'Você precisa estar logado!');
+        if (empty($tags)) {
+            $tags = ['all', 'general', 'question', 'job', 'promotion', 'idea', 'collaboration', 'news', 'paper'];
         }
 
-        \Log::info('Dados recebidos no store:', $request->all());
+        // Iniciar query base
+        $query = PostPortal::whereNull('parent_id') // Apenas posts principais, não respostas
+            ->with(['user', 'replies.user']) // Carrega respostas e usuários em uma única consulta
+            ->latest();
 
-        try {
-            $validated = $request->validate([
-                'content' => 'required|string|max:5000',
-                'media' => 'nullable|file|mimes:jpg,png,mp4|max:10240'
-            ]);
+        // Processar tags selecionadas
+        $selectedTags = $request->input('tags', []);
 
-            $post = new PortalPost();
-            $post->content = $request->content;
-            $post->user_id = auth()->id();
-
-            if ($request->hasFile('media')) {
-                \Log::info('Salvando mídia...', ['file' => $request->file('media')->getClientOriginalName()]);
-                $path = $request->file('media')->store('public/posts');
-                $post->media = $path;
-                $post->media_type = $request->file('media')->getClientOriginalExtension() === 'mp4' ? 'video' : 'image';
-            }
-
-            $post->save();
-            \Log::info('Post salvo:', $post->toArray());
-
-            return redirect()->route('portal')->with('success', 'Postagem criada com sucesso!');
-        } catch (\Exception $e) {
-            \Log::error('Erro ao salvar post:', ['error' => $e->getMessage()]);
-            return redirect()->back()->withErrors(['content' => 'Erro ao salvar a postagem: ' . $e->getMessage()])->withInput();
+        if (!is_array($selectedTags)) {
+            $selectedTags = array_filter(explode(',', $selectedTags));
         }
+
+        // Limitar a 3 tags selecionadas para evitar consultas muito complexas
+        $selectedTags = array_slice($selectedTags, 0, 3);
+
+        // Aplicar filtro de tags se necessário
+        if (!empty($selectedTags) && !in_array('all', $selectedTags)) {
+            $query->where(function ($q) use ($selectedTags) {
+                $q->whereIn('tag', $selectedTags)
+                    ->orWhereJsonContains('additional_tags', $selectedTags);
+            });
+        }
+
+        // Adicionar limites e paginação para evitar timeout
+        $posts = $query->limit(20)->get();
+
+        return view('portal', compact('posts', 'tags', 'selectedTags', 'tagColors'));
     }
 
-    public function togglePin(PortalPost $post)
+    /**
+     * Filtra os posts baseado em tags (para requisições AJAX/JSON)
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\View\View
+     */
+    public function filter(Request $request)
     {
-        $post->pinned = !$post->pinned;
-        $post->save();
-        return redirect()->route('portal')->with('success', 'Postagem atualizada!');
+        // Obter cores das tags
+        $tagColors = config('tags.colors', []);
+        $tags = array_keys($tagColors);
+
+        if (empty($tags)) {
+            $tags = ['all', 'general', 'question', 'job', 'promotion', 'idea', 'collaboration', 'news', 'paper'];
+        }
+
+        // Iniciar a consulta com posts principais
+        $query = PostPortal::whereNull('parent_id')
+            ->with(['user', 'replies.user'])
+            ->latest();
+
+        // Processar tags selecionadas
+        $selectedTags = $request->input('tags', []);
+
+        if (!is_array($selectedTags)) {
+            $selectedTags = array_filter(explode(',', $selectedTags));
+        }
+
+        // Limitar a 3 tags selecionadas
+        $selectedTags = array_slice($selectedTags, 0, 3);
+
+        // Aplicar filtro de tags
+        if (!empty($selectedTags) && !in_array('all', $selectedTags)) {
+            $query->where(function ($q) use ($selectedTags) {
+                $q->whereIn('tag', $selectedTags)
+                    ->orWhereJsonContains('additional_tags', $selectedTags);
+            });
+        }
+
+        // Verificar se esperamos JSON (para AJAX)
+        if ($request->expectsJson()) {
+            $posts = $query->limit(20)->get()->map(function ($post) use ($tagColors) {
+                return [
+                    'id' => $post->id,
+                    'user' => [
+                        'id' => $post->user->id,
+                        'name' => $post->user->name,
+                        'profile_url' => route('public.profile', $post->user),
+                    ],
+                    'content' => $post->content,
+                    'tag' => $post->tag,
+                    'tag_color' => $tagColors[$post->tag] ?? 'bg-gray-200 text-gray-700',
+                    'additional_tags' => $post->additional_tags ?? [],
+                    'metadata' => $post->metadata ?? [],
+                    'created_at_diff' => $post->created_at->diffForHumans(),
+                    'can_delete' => auth()->check() && auth()->user()->can('delete', $post),
+                    'reply_url' => route('posts.reply', $post),
+                    'replies' => $post->replies->map(function ($reply) {
+                        return [
+                            'id' => $reply->id,
+                            'user' => [
+                                'id' => $reply->user->id,
+                                'name' => $reply->user->name,
+                                'profile_url' => route('public.profile', $reply->user),
+                            ],
+                            'content' => $reply->content,
+                            'metadata' => $reply->metadata ?? [],
+                            'created_at_diff' => $reply->created_at->diffForHumans(),
+                            'can_delete' => auth()->check() && auth()->user()->can('delete', $reply),
+                        ];
+                    })->toArray(),
+                ];
+            });
+
+            return response()->json(['posts' => $posts]);
+        }
+
+        // Para requisições normais, retornar a view
+        $posts = $query->limit(20)->get();
+
+        return view('portal', compact('posts', 'tags', 'selectedTags', 'tagColors'));
     }
 }

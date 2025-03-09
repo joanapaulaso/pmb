@@ -8,6 +8,7 @@
         "php": "^8.2",
         "ezyang/htmlpurifier": "^4.18",
         "guzzlehttp/guzzle": "^7.8",
+        "intervention/image": "^3.11",
         "laravel/framework": "^11.0",
         "laravel/jetstream": "^5.1",
         "laravel/sanctum": "^4.0",

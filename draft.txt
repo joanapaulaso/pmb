@@ -23,8 +23,6 @@ $dados = [
     'institution_id' => 191,
 ];
 
-
-
 $dados = [
     'full_name' => 'Teste Usuário',
     'email' => 'teste@exemplo2.com',

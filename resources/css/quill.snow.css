@@ -111,3 +111,114 @@
     padding-left: 16px;
     margin: 10px 0;
 }
+
+/* Estilos para imagens nos posts e nas respostas */
+.post-content img,
+.reply-content img,
+.quill-image,
+.responsive-image {
+    /* Tamanho máximo em desktop (1/3 da largura) */
+    max-width: 50%;
+    height: auto;
+
+    /* Centralizar por padrão */
+    display: block;
+    margin: 1rem 0;
+
+    /* Adiciona uma borda suave */
+    border-radius: 4px;
+
+    /* Transição suave para hover */
+    transition: all 0.2s ease-in-out;
+
+    /* Previne problemas de layout */
+    object-fit: contain;
+}
+
+/* Efeito hover sutil */
+.post-content img:hover,
+.reply-content img:hover,
+.quill-image:hover,
+.responsive-image:hover {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Quando a imagem é muito maior, permite que ela ocupe mais espaço */
+.post-content img.large,
+.reply-content img.large,
+.quill-image.large,
+.responsive-image.large {
+    max-width: 66.666%;
+}
+
+/* Estilos responsivos para telas médias (tablets) */
+@media (max-width: 768px) {
+
+    .post-content img,
+    .reply-content img,
+    .quill-image,
+    .responsive-image {
+        max-width: 50%;
+    }
+
+    .post-content img.large,
+    .reply-content img.large,
+    .quill-image.large,
+    .responsive-image.large {
+        max-width: 80%;
+    }
+}
+
+/* Estilos responsivos para celulares */
+@media (max-width: 640px) {
+
+    .post-content img,
+    .reply-content img,
+    .quill-image,
+    .responsive-image {
+        max-width: 100%;
+        max-height: 70vh;
+        /* Máximo de 70% da altura da viewport em celulares */
+    }
+
+    .post-content img.large,
+    .reply-content img.large,
+    .quill-image.large,
+    .responsive-image.large {
+        max-width: 100%;
+    }
+}
+
+/* Estilos específicos do editor Quill */
+.ql-editor img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1rem 0;
+}
+
+/* Estilos para o container de imagem no Quill */
+.ql-editor p {
+    position: relative;
+}
+
+/* Estilo para o botão de redimensionar imagem (opcional) */
+.image-resizer {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.image-resizer:hover {
+    background-color: rgba(0, 0, 0, 0.5);
+}

@@ -80,7 +80,7 @@
                 <p class="text-sm text-gray-500">{{ $post->created_at->diffForHumans() }}</p>
 
                 @can('delete', $post)
-                    <form action="{{ route('posts.destroy', $post) }}" method="POST" class="inline">
+                    <form action="{{ route('posts-portal.destroy', $post) }}" method="POST" class="inline">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="text-red-500">Deletar</button>
@@ -91,7 +91,7 @@
                     <button @click="showReply = !showReply" class="text-blue-500">Responder</button>
                     <div x-show="showReply" class="mt-2">
                         <!-- Note a mudança aqui: passamos o $event ao invés do form -->
-                        <form @submit.prevent="submitReply($event, '{{ route('posts.reply', $post) }}', {{ $post->id }})">
+                        <form @submit.prevent="submitReply($event, '{{ route('posts-portal.reply', $post) }}', {{ $post->id }})">
                             @csrf
                             <!-- Adicionar mini-editor Quill para respostas -->
                             <div class="reply-quill-container mb-2">
@@ -144,7 +144,7 @@
                         @endif
                         <p class="text-sm text-gray-500">{{ $reply->created_at->diffForHumans() }}</p>
                         @can('delete', $reply)
-                            <form action="{{ route('replies.destroy', $reply) }}" method="POST" class="inline">
+                            <form action="{{ route('replies-portal.destroy', $reply) }}" method="POST" class="inline">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="text-red-500">Delete</button>
@@ -257,7 +257,7 @@ window.toggleTag = function(element, tag) {
 };
 
 function fetchPosts(tags) {
-    fetch('{{ route('dashboard') }}', {
+    fetch('{{ route('portal') }}', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': window.csrfToken,
@@ -393,7 +393,7 @@ function updatePosts(posts) {
             ${metadataHtml}
             <p class="text-sm text-gray-500">${post.created_at_diff}</p>
             ${post.can_delete ? `
-                <form action="/posts/${post.id}" method="POST" class="inline">
+                <form action="/posts-portal/${post.id}" method="POST" class="inline">
                     <input type="hidden" name="_token" value="${window.csrfToken}">
                     <input type="hidden" name="_method" value="DELETE">
                     <button type="submit" class="text-red-500">Delete</button>

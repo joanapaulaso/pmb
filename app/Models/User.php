@@ -70,6 +70,11 @@ class User extends Authenticatable
         return $this->hasMany(Post::class);
     }
 
+    public function portalPosts()
+    {
+        return $this->hasMany(PostPortal::class);
+    }
+
     /**
      * Relação com categorias
      */
