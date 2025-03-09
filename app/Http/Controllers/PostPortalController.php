@@ -138,24 +138,32 @@ class PostPortalController extends Controller
             $metadata = [];
 
             try {
-                // Extract URLs from HTML content, excluding localhost
+                // Extract URLs from HTML content, excluding localhost and image URLs
                 $shouldExtractLink = false;
                 $url = null;
 
-                // Look for URLs in the content that aren't localhost
-                if (preg_match('/\bhttps?:\/\/(?!localhost)\S+/i', $content, $match)) {
-                    $url = $match[0]; // URL found in text
+                // Primeiro verifique se há URLs de texto no conteúdo que não são imagens
+                if (preg_match('/\bhttps?:\/\/(?!localhost)[^"\'<>]+(?!\.(?:jpg|jpeg|png|gif|webp))/i', $content, $match)) {
+                    $url = $match[0]; // URL encontrada no texto que não é imagem
                     $shouldExtractLink = true;
-                } elseif (preg_match('/href=["\']([^"\']+)["\']/i', $content, $match)) {
+                }
+                // Depois verifique links href (excluindo imagens)
+                elseif (preg_match('/href=["\']([^"\']+)(?!\.(?:jpg|jpeg|png|gif|webp))["\'](?!.*<img)/i', $content, $match)) {
                     $possibleUrl = $match[1];
-                    // Check if not localhost
-                    if (strpos($possibleUrl, 'localhost') === false) {
+                    // Verificar se não é localhost
+                    if (
+                        strpos($possibleUrl, 'localhost') === false &&
+                        strpos($possibleUrl, '.jpg') === false &&
+                        strpos($possibleUrl, '.jpeg') === false &&
+                        strpos($possibleUrl, '.png') === false &&
+                        strpos($possibleUrl, '.gif') === false
+                    ) {
                         $url = $possibleUrl;
                         $shouldExtractLink = true;
                     }
                 }
 
-                // Only extract metadata if it's a valid URL and not localhost
+                // Apenas extrair metadados se for uma URL válida que não seja imagem
                 if ($shouldExtractLink && $url) {
                     // Use try-catch specific to the link preview service
                     try {
@@ -330,18 +338,21 @@ class PostPortalController extends Controller
             return '';
         }
 
-        // Remover pontos após as tags de imagem
+        // Remover links gerados automaticamente após imagens
         $html = preg_replace('/<img[^>]*>(\s*)<a[^>]*>([^<]*)<\/a>/', '<img$1>', $html);
+
+        // Corrigir aspas extras nos links
+        $html = str_replace('href="&quot;', 'href="', $html);
+        $html = str_replace('&quot;"', '"', $html);
+
+        // Evitar que URLs de imagem gerem metadados
+        $html = preg_replace('/<a\s+href="([^"]*\.(?:jpg|jpeg|png|gif|webp))"[^>]*>([^<]*)<\/a>/', '$2', $html);
 
         // Remover qualquer menção a localhost como um link (mantendo o texto)
         $html = preg_replace('/<a[^>]*localhost[^>]*>([^<]*)<\/a>/', '$1', $html);
 
         // Remover cores e estilos de qualquer texto que contenha apenas um ponto
         $html = preg_replace('/<([a-z]+)[^>]*>\s*\.\s*<\/\1>/', '.', $html);
-
-        // Remove links com aspas extras
-        $html = str_replace('href=""', 'href="', $html);
-        $html = str_replace('">', '">', $html);
 
         // Corrigir problema em que a imagem pode estar dentro de tags extras
         $pattern = '/<([a-z]+)[^>]*>\s*(<img[^>]*>)\s*<\/\1>/i';
