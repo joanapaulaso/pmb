@@ -4,6 +4,11 @@
     "src": "resources/css/app.css",
     "isEntry": true
   },
+  "resources/css/quill.snow.css": {
+    "file": "assets/quill-BjJRTKNk.css",
+    "src": "resources/css/quill.snow.css",
+    "isEntry": true
+  },
   "resources/images/carousel.png": {
     "file": "assets/carousel-D2dj3uaZ.png",
     "src": "resources/images/carousel.png"

@@ -34,7 +34,7 @@ export default defineConfig({
             input: {
                 app: 'resources/js/app.js',
                 appCss: 'resources/css/app.css',
-                // postScripts: 'resources/js/post-scripts.js'
+                quill: 'resources/css/quill.snow.css',
             },
         },
     },
