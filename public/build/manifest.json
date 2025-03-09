@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/appCss-D91D5Ck7.css",
+    "file": "assets/appCss-CuFUGRDC.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -81,10 +81,13 @@
     "src": "resources/images/mass_spec_detail_00.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-4mNzUsqY.js",
+    "file": "assets/app-AlOVNr8I.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
+    "css": [
+      "assets/app-BzY4kI8E.css"
+    ],
     "assets": [
       "assets/carousel-D2dj3uaZ.png",
       "assets/carousel_00-aJwdxpbF.png",

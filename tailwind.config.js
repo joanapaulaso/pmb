@@ -12,6 +12,25 @@ export default {
         './config/**/*.php',
     ],
 
+    safelist: [
+        // Classes do Quill
+        { pattern: /ql-/ },
+        { pattern: /^ql-size-/ },
+        { pattern: /^ql-font-/ },
+        { pattern: /^ql-align-/ },
+        { pattern: /^ql-bg-/ },
+        { pattern: /^ql-color-/ },
+        { pattern: /^ql-indent-/ },
+
+        // Classes do Tailwind Typography para exibição de conteúdo
+        { pattern: /^prose/ },
+
+        // Classes específicas
+        'ql-size-small', 'ql-size-large', 'ql-size-huge',
+        'ql-font-serif', 'ql-font-monospace',
+        'ql-align-center', 'ql-align-right', 'ql-align-justify',
+    ],
+
     theme: {
         extend: {
             fontFamily: {

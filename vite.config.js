@@ -15,11 +15,18 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/app.css',
+                'resources/css/quill.snow.css',
                 'resources/js/app.js',
+                // 'resources/js/post-scripts.js',
             ],
             refresh: true,
         }),
     ],
+    resolve: {
+        alias: {
+            '@quill': '/node_modules/quill'
+        },
+    },
     build: {
         outDir: 'public/build',
         assetsDir: 'assets',
@@ -27,6 +34,7 @@ export default defineConfig({
             input: {
                 app: 'resources/js/app.js',
                 appCss: 'resources/css/app.css',
+                // postScripts: 'resources/js/post-scripts.js'
             },
         },
     },

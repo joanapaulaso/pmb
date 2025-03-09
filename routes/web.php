@@ -9,6 +9,7 @@ use App\Http\Controllers\DropdownController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\LabsMapController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PortalController;
 use App\Livewire\RegisterComponent;
 
 /*
@@ -46,6 +47,11 @@ Route::middleware($authMiddleware)->group(function () {
         Route::get('/dashboard', 'index')->name('dashboard');
         Route::post('/dashboard', 'filter')->name('dashboard.filter');
     });
+
+    // Grupo de rotas do Portal
+    Route::get('/portal', [PortalController::class, 'index'])->name('portal');
+    Route::post('/portal', [PortalController::class, 'store'])->name('portal.store');
+    Route::patch('/portal/{post}/pin', [PortalController::class, 'togglePin'])->name('portal.pin');
 
     // Grupo de rotas de Usuários
     Route::controller(UserController::class)->group(function () {

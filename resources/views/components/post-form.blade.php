@@ -1,10 +1,12 @@
+<!-- Modificação para resources/views/post-form.blade.php -->
+
 @props(['tags'])
 
 @php
     $tagColors = config('tags.colors');
 @endphp
 
-<div x-data="tagSelector()" class="mb-10">
+<div x-data="postForm()" class="mb-10">
     @if (isset($post))
         <!-- Reply form remains unchanged -->
         <form action="{{ route('posts.reply', $post) }}" method="POST">
@@ -13,14 +15,54 @@
             <button type="submit" class="mt-3 px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-full text-sm shadow-sm transition-all duration-200">Reply</button>
         </form>
     @else
-        <form action="{{ route('posts.store') }}" method="POST">
+        <form action="{{ route('posts.store') }}" method="POST" x-ref="postForm">
             @csrf
-            <textarea
-                name="content"
-                rows="3"
-                class="w-full border border-gray-200 rounded-lg p-3 mb-3 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200"
-                placeholder="Write your post"
-            ></textarea>
+
+            <!-- Hidden field to store Quill content -->
+            <input type="hidden" name="content" x-ref="contentInput">
+
+            <!-- Quill container -->
+            <div class="mb-3">
+                <!-- Quill toolbar -->
+                <div id="quill-toolbar">
+                    <span class="ql-formats">
+                        <select class="ql-font">
+                            <option value="sans-serif" selected>Sans Serif</option>
+                            <option value="serif">Serif</option>
+                            <option value="monospace">Monospace</option>
+                        </select>
+                        <select class="ql-size">
+                            <option value="small">Small</option>
+                            <option selected>Normal</option>
+                            <option value="large">Large</option>
+                            <option value="huge">Huge</option>
+                        </select>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-bold"></button>
+                        <button class="ql-italic"></button>
+                        <button class="ql-underline"></button>
+                        <button class="ql-strike"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <select class="ql-color"></select>
+                        <select class="ql-background"></select>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-list" value="ordered"></button>
+                        <button class="ql-list" value="bullet"></button>
+                        <button class="ql-indent" value="-1"></button>
+                        <button class="ql-indent" value="+1"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-link"></button>
+                        <button class="ql-image"></button>
+                    </span>
+                </div>
+
+                <!-- Quill editor container -->
+                <div id="quill-editor" class="border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200" style="min-height: 100px;"></div>
+            </div>
 
             <div class="mb-3 relative">
                 <div class="flex items-center mb-2">
@@ -104,6 +146,7 @@
 
             <button
                 type="submit"
+                @click.prevent="submitForm"
                 class="px-4 py-1.5 mt-8 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm shadow-sm transition-all duration-200"
             >
                 Post
@@ -113,11 +156,50 @@
 </div>
 
 <script>
-    function tagSelector() {
+    function postForm() {
         return {
             open: false,
             selectedTags: [],
+            quill: null,
             tagColors: @json($tagColors), // Use the colors from the config
+
+            // Initialize
+            init() {
+                // Initialize Quill after Alpine component is mounted
+                this.$nextTick(() => {
+                    this.initQuill();
+                });
+            },
+
+            // Initialize Quill editor
+            initQuill() {
+                if (typeof Quill === 'undefined') {
+                    console.error('Quill is not loaded');
+                    return;
+                }
+
+                this.quill = new Quill('#quill-editor', {
+                    modules: {
+                        toolbar: '#quill-toolbar'
+                    },
+                    placeholder: 'Write your post',
+                    theme: 'snow'
+                });
+            },
+
+            // Submit form with Quill content
+            submitForm() {
+                if (this.quill) {
+                    // Get content from Quill and set it to hidden input
+                    const content = this.quill.root.innerHTML;
+                    this.$refs.contentInput.value = content;
+
+                    // Submit the form
+                    this.$refs.postForm.submit();
+                }
+            },
+
+            // Tag functions
             toggle() {
                 this.open = !this.open;
             },

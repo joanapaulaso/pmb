@@ -1,0 +1,113 @@
+/* resources/css/app.css - adicione estes estilos para preservar as formatações do Quill */
+
+/* Estilos para preservar a formatação do Quill na exibição dos posts */
+.post-content p,
+.reply-content p {
+    margin-bottom: 0.5rem;
+}
+
+/* Tamanhos de fonte */
+.post-content .ql-size-small,
+.reply-content .ql-size-small {
+    font-size: 0.75rem;
+}
+
+.post-content .ql-size-large,
+.reply-content .ql-size-large {
+    font-size: 1.5rem;
+}
+
+.post-content .ql-size-huge,
+.reply-content .ql-size-huge {
+    font-size: 2rem;
+    line-height: 2.5rem;
+}
+
+/* Família de fontes */
+.post-content .ql-font-serif,
+.reply-content .ql-font-serif {
+    font-family: Georgia, Times New Roman, serif;
+}
+
+.post-content .ql-font-monospace,
+.reply-content .ql-font-monospace {
+    font-family: Monaco, Courier New, monospace;
+}
+
+/* Alinhamento de texto */
+.post-content .ql-align-center,
+.reply-content .ql-align-center {
+    text-align: center;
+}
+
+.post-content .ql-align-right,
+.reply-content .ql-align-right {
+    text-align: right;
+}
+
+.post-content .ql-align-justify,
+.reply-content .ql-align-justify {
+    text-align: justify;
+}
+
+/* Cores e backgrounds */
+.post-content .ql-bg-black,
+.reply-content .ql-bg-black {
+    background-color: #000;
+}
+
+.post-content .ql-bg-red,
+.reply-content .ql-bg-red {
+    background-color: #e60000;
+}
+
+.post-content .ql-bg-yellow,
+.reply-content .ql-bg-yellow {
+    background-color: #ffff00;
+}
+
+.post-content .ql-bg-green,
+.reply-content .ql-bg-green {
+    background-color: #008a00;
+}
+
+.post-content .ql-color-white,
+.reply-content .ql-color-white {
+    color: #fff;
+}
+
+.post-content .ql-color-red,
+.reply-content .ql-color-red {
+    color: #e60000;
+}
+
+.post-content .ql-color-yellow,
+.reply-content .ql-color-yellow {
+    color: #ffff00;
+}
+
+.post-content .ql-color-green,
+.reply-content .ql-color-green {
+    color: #008a00;
+}
+
+/* Garantir que listas sejam exibidas corretamente */
+.post-content ul,
+.reply-content ul {
+    list-style-type: disc;
+    margin-left: 1.5em;
+}
+
+.post-content ol,
+.reply-content ol {
+    list-style-type: decimal;
+    margin-left: 1.5em;
+}
+
+/* Garantir que blockquotes sejam exibidos corretamente */
+.post-content blockquote,
+.reply-content blockquote {
+    border-left: 4px solid #ccc;
+    padding-left: 16px;
+    margin: 10px 0;
+}

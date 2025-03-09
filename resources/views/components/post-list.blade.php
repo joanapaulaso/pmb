@@ -60,7 +60,8 @@
                     @endif
                 </div>
 
-                <p>{{ $post->content }}</p>
+                <!-- Render HTML content from Quill -->
+                <div class="post-content prose max-w-none">{!! $post->content !!}</div>
 
                 @if (!empty($post->metadata))
                     <div class="mt-4 border rounded flex overflow-hidden">
@@ -89,46 +90,68 @@
                 <div x-data="{ showReply: false, replying: false }">
                     <button @click="showReply = !showReply" class="text-blue-500">Responder</button>
                     <div x-show="showReply" class="mt-2">
+                        <!-- Note a mudança aqui: passamos o $event ao invés do form -->
                         <form @submit.prevent="submitReply($event, '{{ route('posts.reply', $post) }}', {{ $post->id }})">
                             @csrf
-                            <textarea name="content" rows="2" class="w-full border rounded p-2" placeholder="Reply to this post"></textarea>
+                            <!-- Adicionar mini-editor Quill para respostas -->
+                            <div class="reply-quill-container mb-2">
+                                <div class="reply-quill-toolbar-{{ $post->id }}">
+                                    <span class="ql-formats">
+                                        <button class="ql-bold"></button>
+                                        <button class="ql-italic"></button>
+                                        <button class="ql-underline"></button>
+                                    </span>
+                                    <span class="ql-formats">
+                                        <button class="ql-link"></button>
+                                    </span>
+                                </div>
+                                <div id="reply-quill-editor-{{ $post->id }}" class="border rounded p-2" style="min-height: 80px;"></div>
+                                <input type="hidden" name="content" class="reply-content-input">
+                            </div>
                             <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded" :disabled="replying">Reply</button>
                         </form>
                     </div>
                 </div>
 
                 <div class="replies-container ml-8 mt-4 border-l-2 border-gray-200 pl-4">
-                    @foreach($post->replies as $reply)
-                        <div class="mb-4">
-                            <p class="font-bold">
-                                <a href="{{ route('public.profile', $reply->user) }}" class="text-blue-500 hover:underline">
-                                    {{ $reply->user->name }}
-                                </a>
-                            </p>
-                            <p>{{ $reply->content }}</p>
-                            @if (!empty($reply->metadata))
-                                <div class="mt-4 border rounded flex overflow-hidden">
-                                    <a href="{{ $reply->metadata['url'] }}" target="_blank" class="flex w-full">
-                                        @if (!empty($reply->metadata['image']))
-                                            <img src="{{ $reply->metadata['image'] }}" alt="{{ $reply->metadata['title'] }}" class="w-24 h-auto object-cover">
-                                        @endif
-                                        <div class="p-4 flex-grow">
-                                            <h3 class="font-semibold text-lg">{{ $reply->metadata['title'] }}</h3>
+                    <!-- Modificação para o arquivo post-list.blade.php -->
+
+                @foreach($post->replies as $reply)
+                    <div class="mb-4">
+                        <p class="font-bold">
+                            <a href="{{ route('public.profile', $reply->user) }}" class="text-blue-500 hover:underline">
+                                {{ $reply->user->name }}
+                            </a>
+                        </p>
+                        <!-- Render HTML content for reply -->
+                        <div class="reply-content prose max-w-none">{!! $reply->content !!}</div>
+
+                        <!-- Só exibe metadados se eles realmente estiverem completos -->
+                        @if (!empty($reply->metadata) && !empty($reply->metadata['url']) && !empty($reply->metadata['title']))
+                            <div class="mt-4 border rounded flex overflow-hidden">
+                                <a href="{{ $reply->metadata['url'] }}" target="_blank" class="flex w-full">
+                                    @if (!empty($reply->metadata['image']))
+                                        <img src="{{ $reply->metadata['image'] }}" alt="{{ $reply->metadata['title'] }}" class="w-24 h-auto object-cover">
+                                    @endif
+                                    <div class="p-4 flex-grow">
+                                        <h3 class="font-semibold text-lg">{{ $reply->metadata['title'] }}</h3>
+                                        @if (!empty($reply->metadata['description']))
                                             <p>{{ $reply->metadata['description'] }}</p>
-                                        </div>
-                                    </a>
-                                </div>
-                            @endif
-                            <p class="text-sm text-gray-500">{{ $reply->created_at->diffForHumans() }}</p>
-                            @can('delete', $reply)
-                                <form action="{{ route('replies.destroy', $reply) }}" method="POST" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-500">Delete</button>
-                                </form>
-                            @endcan
-                        </div>
-                    @endforeach
+                                        @endif
+                                    </div>
+                                </a>
+                            </div>
+                        @endif
+                        <p class="text-sm text-gray-500">{{ $reply->created_at->diffForHumans() }}</p>
+                        @can('delete', $reply)
+                            <form action="{{ route('replies.destroy', $reply) }}" method="POST" class="inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-red-500">Delete</button>
+                            </form>
+                        @endcan
+                    </div>
+                @endforeach
                 </div>
             </div>
         @endforeach
@@ -290,12 +313,83 @@ function updatePosts(posts) {
             `;
         }
 
+        const replyFormHtml = `
+        <div x-data="{ showReply: false, replying: false }">
+            <button @click="showReply = !showReply" class="text-blue-500">Reply</button>
+            <div x-show="showReply" class="mt-2">
+                <!-- Note que aqui passamos $event em vez do formulário -->
+                <form onsubmit="event.preventDefault(); window.submitReply(event, '${post.reply_url}', ${post.id});">
+                    <input type="hidden" name="_token" value="${window.csrfToken}">
+
+                    <!-- Reply Quill Editor -->
+                    <div class="reply-quill-container mb-2">
+                        <div class="reply-quill-toolbar-${post.id}">
+                            <span class="ql-formats">
+                                <button class="ql-bold"></button>
+                                <button class="ql-italic"></button>
+                                <button class="ql-underline"></button>
+                            </span>
+                            <span class="ql-formats">
+                                <button class="ql-link"></button>
+                            </span>
+                        </div>
+                        <div id="reply-quill-editor-${post.id}" class="border rounded p-2" style="min-height: 80px;"></div>
+                        <input type="hidden" name="content" class="reply-content-input">
+                    </div>
+
+                    <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded" :disabled="replying">Reply</button>
+                </form>
+            </div>
+        </div>
+        `;
+
+        // Modificar esta parte na função updatePosts no arquivo post-list.blade.php
+
+        // Mapear as respostas com verificação de metadados válidos
+        const repliesHtml = post.replies.map(reply => {
+            let metadataHtml = '';
+
+            // Só adiciona o bloco de metadados se tiver dados válidos
+            if (reply.metadata && reply.metadata.url && reply.metadata.title) {
+                metadataHtml = `
+                    <div class="mt-4 border rounded flex overflow-hidden">
+                        <a href="${reply.metadata.url}" target="_blank" class="flex w-full">
+                            ${reply.metadata.image ? `<img src="${reply.metadata.image}" alt="${reply.metadata.title}" class="w-24 h-auto object-cover">` : ''}
+                            <div class="p-4 flex-grow">
+                                <h3 class="font-semibold text-lg">${reply.metadata.title}</h3>
+                                ${reply.metadata.description ? `<p>${reply.metadata.description}</p>` : ''}
+                            </div>
+                        </a>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="mb-4">
+                    <p class="font-bold">
+                        <a href="${reply.user.profile_url}" class="text-blue-500 hover:underline">${reply.user.name}</a>
+                    </p>
+                    <div class="reply-content prose max-w-none">${reply.content}</div>
+                    ${metadataHtml}
+                    <p class="text-sm text-gray-500">${reply.created_at_diff}</p>
+                    ${reply.can_delete ? `
+                        <form action="/replies/${reply.id}" method="POST" class="inline">
+                            <input type="hidden" name="_token" value="${window.csrfToken}">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <button type="submit" class="text-red-500">Delete</button>
+                        </form>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+
+        // Usar essa variável repliesHtml na string de template principal
         postElement.innerHTML = `
             <p class="font-bold">
                 <a href="${post.user.profile_url}" class="text-blue-500 hover:underline">${post.user.name}</a>
             </p>
             <div class="flex flex-wrap gap-2 mb-2">${tagsHtml}</div>
-            <p>${post.content}</p>
+            <div class="post-content prose max-w-none">${post.content}</div>
             ${metadataHtml}
             <p class="text-sm text-gray-500">${post.created_at_diff}</p>
             ${post.can_delete ? `
@@ -308,52 +402,102 @@ function updatePosts(posts) {
             <div x-data="{ showReply: false, replying: false }">
                 <button @click="showReply = !showReply" class="text-blue-500">Reply</button>
                 <div x-show="showReply" class="mt-2">
-                    <form onsubmit="event.preventDefault(); window.submitReply(this, '${post.reply_url}', ${post.id});">
+                    <form onsubmit="event.preventDefault(); window.submitReply(event, '${post.reply_url}', ${post.id});">
                         <input type="hidden" name="_token" value="${window.csrfToken}">
-                        <textarea name="content" rows="2" class="w-full border rounded p-2" placeholder="Reply to this post"></textarea>
+
+                        <!-- Reply Quill Editor -->
+                        <div class="reply-quill-container mb-2">
+                            <div class="reply-quill-toolbar-${post.id}">
+                                <span class="ql-formats">
+                                    <button class="ql-bold"></button>
+                                    <button class="ql-italic"></button>
+                                    <button class="ql-underline"></button>
+                                </span>
+                                <span class="ql-formats">
+                                    <button class="ql-link"></button>
+                                </span>
+                            </div>
+                            <div id="reply-quill-editor-${post.id}" class="border rounded p-2" style="min-height: 80px;"></div>
+                            <input type="hidden" name="content" class="reply-content-input">
+                        </div>
+
                         <button type="submit" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded" :disabled="replying">Reply</button>
                     </form>
                 </div>
             </div>
             <div class="replies-container ml-8 mt-4 border-l-2 border-gray-200 pl-4">
-                ${post.replies.map(reply => `
-                    <div class="mb-4">
-                        <p class="font-bold">
-                            <a href="${reply.user.profile_url}" class="text-blue-500 hover:underline">${reply.user.name}</a>
-                        </p>
-                        <p>${reply.content}</p>
-                        ${reply.metadata && reply.metadata.url ? `
-                            <div class="mt-4 border rounded flex overflow-hidden">
-                                <a href="${reply.metadata.url}" target="_blank" class="flex w-full">
-                                    ${reply.metadata.image ? `<img src="${reply.metadata.image}" alt="${reply.metadata.title}" class="w-24 h-auto object-cover">` : ''}
-                                    <div class="p-4 flex-grow">
-                                        <h3 class="font-semibold text-lg">${reply.metadata.title}</h3>
-                                        <p>${reply.metadata.description}</p>
-                                    </div>
-                                </a>
-                            </div>
-                        ` : ''}
-                        <p class="text-sm text-gray-500">${reply.created_at_diff}</p>
-                        ${reply.can_delete ? `
-                            <form action="/replies/${reply.id}" method="POST" class="inline">
-                                <input type="hidden" name="_token" value="${window.csrfToken}">
-                                <input type="hidden" name="_method" value="DELETE">
-                                <button type="submit" class="text-red-500">Delete</button>
-                            </form>
-                        ` : ''}
-                    </div>
-                `).join('')}
+                ${repliesHtml}
             </div>
         `;
-
         container.appendChild(postElement);
+
+        // Initialize Quill for this reply after adding to DOM
+        initializeReplyQuill(post.id);
     });
 }
 
+// Inicializar o Quill para respostas
+function initializeReplyQuill(postId) {
+    if (typeof Quill === 'undefined') {
+        console.error('Quill is not loaded');
+        return;
+    }
+
+    const editorContainer = document.getElementById(`reply-quill-editor-${postId}`);
+    const toolbarContainer = document.querySelector(`.reply-quill-toolbar-${postId}`);
+
+    if (!editorContainer || !toolbarContainer) return;
+
+    const replyQuill = new Quill(editorContainer, {
+        modules: {
+            toolbar: toolbarContainer
+        },
+        placeholder: 'Type your reply here...',
+        theme: 'snow'
+    });
+
+    // Store a reference to the Quill instance
+    editorContainer.quill = replyQuill;
+}
+
 // Definindo submitReply no escopo global
-window.submitReply = function(form, actionUrl, postId) {
+window.submitReply = function(event, actionUrl, postId) {
+    // Obter o formulário a partir do evento
+    const form = event.target;
     const submitButton = form.querySelector('button[type="submit"]');
+
+    if (!submitButton) {
+        console.error('Botão de submit não encontrado');
+        return;
+    }
+
     submitButton.disabled = true;
+
+    // Get Quill content
+    const editorContainer = document.getElementById(`reply-quill-editor-${postId}`);
+    if (!editorContainer) {
+        console.error(`Editor container não encontrado para post ${postId}`);
+        submitButton.disabled = false;
+        return;
+    }
+
+    const quill = editorContainer.quill;
+
+    if (quill) {
+        // Set the content to the hidden input
+        const contentInput = form.querySelector('.reply-content-input');
+        if (contentInput) {
+            contentInput.value = quill.root.innerHTML;
+        } else {
+            console.error('Campo de conteúdo não encontrado');
+            submitButton.disabled = false;
+            return;
+        }
+    } else {
+        console.error('Instância Quill não encontrada');
+        submitButton.disabled = false;
+        return;
+    }
 
     fetch(actionUrl, {
         method: 'POST',
@@ -371,15 +515,31 @@ window.submitReply = function(form, actionUrl, postId) {
         if (data.message === 'Reply posted successfully') {
             updateReplyUI(data.reply, postId);
             form.reset();
+
+            // Reset Quill editor
+            if (quill) {
+                quill.setText('');
+            }
+
             const replySection = form.closest('[x-data]');
             if (replySection && typeof Alpine !== 'undefined') {
-                Alpine.raw(Alpine.$data(replySection)).showReply = false;
+                try {
+                    Alpine.raw(Alpine.$data(replySection)).showReply = false;
+                } catch (e) {
+                    console.error('Erro ao acessar dados do Alpine:', e);
+                }
             }
         }
     })
-    .catch(error => console.error('Error:', error))
-    .finally(() => submitButton.disabled = false);
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ocorreu um erro ao enviar sua resposta. Por favor, tente novamente.');
+    })
+    .finally(() => {
+        submitButton.disabled = false;
+    });
 };
+
 
 // Function to update the UI with a new reply
 function updateReplyUI(reply, postId) {
@@ -390,17 +550,18 @@ function updateReplyUI(reply, postId) {
         <p class="font-bold">
             <a href="/profile/${reply.user.id}" class="text-blue-500 hover:underline">${reply.user.name}</a>
         </p>
-        <p>${reply.content}</p>
+        <div class="reply-content prose max-w-none">${reply.content}</div>
     `;
 
-    if (reply.metadata) {
+    // Só exibe o bloco de metadados se realmente tiver metadados válidos
+    if (reply.metadata && reply.metadata.url && reply.metadata.title && reply.metadata.description) {
         replyHTML += `
             <div class="mt-4 border rounded flex overflow-hidden">
                 <a href="${reply.metadata.url}" target="_blank" class="flex w-full">
                     ${reply.metadata.image ? `<img src="${reply.metadata.image}" alt="${reply.metadata.title}" class="w-24 h-auto object-cover">` : ''}
                     <div class="p-4 flex-grow">
-                        <h3 class="font-semibold text-lg">${reply.metadata.title}</h3>
-                        <p>${reply.metadata.description}</p>
+                        <h3 class="font-semibold text-lg">${reply.metadata.title || 'Link'}</h3>
+                        <p>${reply.metadata.description || ''}</p>
                     </div>
                 </a>
             </div>
@@ -451,5 +612,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Inicializar editores Quill para respostas existentes
+    document.querySelectorAll('[id^="post-"]').forEach(post => {
+        const postId = post.id.split('-')[1];
+        if (postId) {
+            initializeReplyQuill(postId);
+        }
+    });
 });
 </script>
