@@ -63,7 +63,7 @@
                 <!-- Render HTML content from Quill -->
                 <div class="post-content prose max-w-none">{!! $post->content !!}</div>
 
-                @if (!empty($post->metadata))
+                @if (!empty($post->metadata) && !preg_match('/\.(jpg|jpeg|png|gif|webp)($|\?)/i', $post->metadata['url']))
                     <div class="mt-4 border rounded flex overflow-hidden">
                         <a href="{{ $post->metadata['url'] }}" target="_blank" class="flex w-full">
                             @if (!empty($post->metadata['image']))
