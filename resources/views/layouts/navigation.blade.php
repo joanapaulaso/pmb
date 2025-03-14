@@ -5,7 +5,8 @@
             <div class="flex items-center space-x-8">
                 <!-- Logo -->
                 <a href="{{ route('welcome') }}" class="flex items-center">
-                    <img class="h-12 w-auto" src="{{ Vite::asset('resources/images/logo.png') }}" alt="PMB Logo">
+                    <img class="h-12 w-auto" src="{{ Vite::asset('resources/images/logo.png') }}" alt="Metabolômica Brasil Logo">
+                    <span class="ml-2 text-xl font-semibold text-gray-900">Metabolômica Brasil</span>
                 </a>
 
                 <!-- Navigation Links -->

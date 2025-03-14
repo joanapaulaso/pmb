@@ -32,7 +32,9 @@ class CreateNewUser implements CreatesNewUsers
             'laboratory_id' => ['nullable', 'exists:laboratories,id'],
             'new_laboratory' => ['nullable', 'string', 'max:255'],
             'gender' => ['required', 'string'],
-            'institution_address' => ['nullable', 'string', 'max:255'], // Novo campo
+            'institution_address' => ['nullable', 'string', 'max:255'],
+            'admin' => ['nullable', 'boolean'],
+            'team_id' => ['nullable', 'exists:teams,id'], // Adicionado campo team_id
         ])->validate();
 
         // Criar ou atualizar instituição com o endereço
@@ -42,23 +44,22 @@ class CreateNewUser implements CreatesNewUsers
                 'state_id' => $input['state_id'] ?? null,
                 'municipality_id' => $input['municipality_id'] ?? null,
                 'country_code' => $input['country_code'] ?? 'BR',
-                'address' => $input['institution_address'] ?? null, // Salvar endereço para nova instituição
+                'address' => $input['institution_address'] ?? null,
             ]);
             $input['institution_id'] = $institution->id;
         } elseif (!empty($input['institution_id']) && !empty($input['institution_address'])) {
-            // Atualizar o endereço da instituição existente, se fornecido
             $institution = Institution::find($input['institution_id']);
-            if ($institution && !$institution->address) { // Apenas atualiza se ainda não houver endereço
+            if ($institution && !$institution->address) {
                 $institution->update(['address' => $input['institution_address']]);
             }
         }
 
-        // Restante do código existente
         if (!empty($input['new_laboratory'])) {
             $input['laboratory_id'] = $this->getOrCreateLaboratory(
                 $input['new_laboratory'],
                 $input['institution_id'] ?? null,
-                $input['state_id'] ?? null
+                $input['state_id'] ?? null,
+                $input['team_id'] ?? null // Passando team_id
             );
         }
 
@@ -66,6 +67,7 @@ class CreateNewUser implements CreatesNewUsers
             'name' => $input['full_name'],
             'email' => $input['email'],
             'password' => Hash::make($input['password']),
+            'admin' => isset($input['admin']) ? (bool)$input['admin'] : false,
         ]);
 
         Profile::create([
@@ -135,7 +137,16 @@ class CreateNewUser implements CreatesNewUsers
         }
     }
 
-    private function getOrCreateLaboratory($labName, $institutionId, $stateId)
+    /**
+     * Obtém ou cria um laboratório com base no nome, instituição, estado e time
+     *
+     * @param string $labName Nome do laboratório
+     * @param int|null $institutionId ID da instituição
+     * @param int|null $stateId ID do estado
+     * @param int|null $teamId ID do time (adicionado)
+     * @return int|null ID do laboratório ou null em caso de erro
+     */
+    private function getOrCreateLaboratory($labName, $institutionId, $stateId, $teamId = null)
     {
         if (!$labName || !$institutionId || !$stateId) {
             return null; // Se faltar algum dado essencial, retorna null
@@ -151,11 +162,20 @@ class CreateNewUser implements CreatesNewUsers
             return null;
         }
 
-        // Verifica se o laboratório já existe para a instituição e estado
-        $laboratory = Laboratory::where('name', $labName)
+        // Constrói a consulta base
+        $query = Laboratory::where('name', $labName)
             ->where('institution_id', $institution->id)
-            ->where('state_id', $stateId)
-            ->first();
+            ->where('state_id', $stateId);
+
+        // Se team_id for fornecido, adiciona à consulta
+        if ($teamId) {
+            $query->where('team_id', $teamId);
+        } else {
+            $query->whereNull('team_id');
+        }
+
+        // Verifica se o laboratório já existe com os critérios fornecidos
+        $laboratory = $query->first();
 
         if (!$laboratory) {
             try {
@@ -163,8 +183,10 @@ class CreateNewUser implements CreatesNewUsers
                     'name' => $labName,
                     'institution_id' => $institution->id,
                     'state_id' => $stateId,
+                    'team_id' => $teamId,
                 ]);
-                \Log::info("Novo laboratório '{$labName}' criado para a instituição '{$institution->name}' no estado {$stateId}");
+                \Log::info("Novo laboratório '{$labName}' criado para a instituição '{$institution->name}' no estado {$stateId}" .
+                    ($teamId ? " e time {$teamId}" : " sem time associado"));
             } catch (\Exception $e) {
                 \Log::error('Erro ao criar laboratório: ' . $e->getMessage());
                 return null;

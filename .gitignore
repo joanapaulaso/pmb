@@ -16,3 +16,4 @@ yarn-error.log
 /.vscode
 deploy.sh
 /public/hot
+/public/uploads

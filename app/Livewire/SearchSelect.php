@@ -19,6 +19,12 @@ class SearchSelect extends Component
     public $placeholder;
     public $initialValue;
 
+    // Flag adicional para controle de filtro
+    public $filterActive = true;
+
+    // Livewire lifecycle hooks
+    protected $listeners = ['dependencyChanged'];
+
     public function mount($model, $field, $dependsOn = [], $placeholder = '', $initialValue = null)
     {
         $this->model = $model;
@@ -30,7 +36,9 @@ class SearchSelect extends Component
 
         $this->search = $this->selectedId ? $this->getSelectedName() : '';
 
-        \Log::info("SearchSelect mounted for field: {$field} with initialValue: " . ($initialValue ?? 'null'));
+        // Log para debug
+        $dependsOnStr = json_encode($dependsOn);
+        \Log::info("SearchSelect mounted for field: {$field} with initialValue: " . ($initialValue ?? 'null') . " and dependencies: {$dependsOnStr}");
     }
 
     public function updatedSearch()
@@ -54,7 +62,33 @@ class SearchSelect extends Component
         $this->dispatch('optionSelected', [
             'field' => $this->field,
             'value' => $idOrCode
-        ]);
+        ])->to('admin.admin-laboratory-form'); // Especificar o componente pai
+    }
+
+    // Handle dependency changes from other components
+    public function dependencyChanged($field, $value)
+    {
+        if (array_key_exists($field, $this->dependsOn)) {
+            \Log::info("SearchSelect {$this->field} updating dependency {$field} to {$value}");
+
+            // Atualizar a dependência
+            $this->dependsOn[$field] = $value;
+
+            // Resetar a seleção atual já que a dependência mudou
+            $this->selectedId = null;
+            $this->search = '';
+
+            // Garantir que o filtro está ativo
+            $this->filterActive = true;
+
+            // Notificar o componente pai sobre o reset
+            $this->dispatch('optionSelected', [
+                'field' => $this->field,
+                'value' => null
+            ])->to('admin.admin-laboratory-form');
+        } else {
+            \Log::warning("SearchSelect {$this->field} received dependencyChanged for unknown field: {$field}");
+        }
     }
 
     private function getSelectedName()
@@ -92,10 +126,18 @@ class SearchSelect extends Component
         $modelClass = $this->getModelClass();
         $query = $modelClass::query();
 
+        // Log importante para verificar as condições durante a renderização
+        \Log::info("SearchSelect {$this->field} rendering with dependencies:", $this->dependsOn);
+
         // Apply any dependency filters (like filtering municipalities by state)
-        foreach ($this->dependsOn as $key => $value) {
-            if ($value) {
-                $query->where($key, $value);
+        if ($this->filterActive) {
+            foreach ($this->dependsOn as $key => $value) {
+                if ($value !== null && $value !== '') { // Garantir que o valor seja válido
+                    $query->where($key, $value);
+                    \Log::info("SearchSelect {$this->field} applying filter {$key} = {$value}");
+                } else {
+                    \Log::info("SearchSelect {$this->field} skipping filter for {$key} due to null/empty value");
+                }
             }
         }
 
@@ -107,6 +149,15 @@ class SearchSelect extends Component
             ->limit(10)
             ->get()
             : collect();
+
+        // Debug: log the SQL query that was executed
+        if ($this->search && !$this->selectedId) {
+            $sql = $query->where('name', 'like', '%' . $this->search . '%')
+                ->limit(10)
+                ->toSql();
+            \Log::info("SearchSelect {$this->field} executing SQL: {$sql}");
+            \Log::info("With bindings: " . json_encode($query->getBindings()));
+        }
 
         // Make sure selected item's text is always displayed
         if ($this->selectedId && empty($this->search)) {

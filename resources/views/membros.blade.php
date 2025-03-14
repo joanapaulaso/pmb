@@ -1,9 +1,9 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Membros UPDATE') }}
+            {{ __('Membros do Portal') }}
         </h2>
     </x-slot>
 
-    <x-members-list :users="$users" />
+    <x-members-list :users="$users" :sort="$sort" :direction="$direction" />
 </x-app-layout>

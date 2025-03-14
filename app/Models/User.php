@@ -29,6 +29,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'admin',
     ];
 
     /**
@@ -62,7 +63,26 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'admin' => 'boolean',
         ];
+    }
+
+    /**
+     * Check if the user is an admin.
+     *
+     * @return bool
+     */
+    public function isAdmin(): bool
+    {
+        return $this->admin === true;
+    }
+
+    /**
+     * Relação com o perfil do usuário
+     */
+    public function profile()
+    {
+        return $this->hasOne(Profile::class);
     }
 
     public function posts()
@@ -105,5 +125,13 @@ class User extends Authenticatable
     public function ownedTeams()
     {
         return $this->hasMany(Team::class, 'user_id');
+    }
+
+    /**
+     * Get all teams the user belongs to or owns
+     */
+    public function allTeams()
+    {
+        return $this->ownedTeams->merge($this->teams);
     }
 }

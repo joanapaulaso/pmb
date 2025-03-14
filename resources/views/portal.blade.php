@@ -11,10 +11,12 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
 
-                    <!-- Include post form for creating new posts -->
-                    <x-post-portal-form :tags="$tags" :selectedTags="$selectedTags" />
+                    <!-- Include post form for creating new posts ONLY for admins -->
+                    @if(auth()->user()->isAdmin())
+                        <x-post-portal-form :tags="$tags" :selectedTags="$selectedTags" />
+                    @endif
 
-                    <!-- Include post list for displaying posts -->
+                    <!-- Include post list for displaying posts (for all users) -->
                     <x-post-portal-list :posts="$posts" :tags="$tags" :selectedTags="$selectedTags" />
                 </div>
             </div>
