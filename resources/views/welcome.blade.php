@@ -43,7 +43,7 @@
                     </div>
                     <div class="hidden sm:flex items-center">
                     @auth
-                        <a href="{{ url('/dashboard') }}" class="bg-[#2A8A9D] text-white px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                        <a href="{{ url('/portal') }}" class="bg-[#2A8A9D] text-white px-3 py-2 rounded-md text-sm font-medium">Portal</a>
                     @else
                         <a href="{{ route('login') }}" class="bg-[#2A8A9D] text-white px-3 py-2 rounded-md text-sm font-medium">Log in</a>
                         @if (Route::has('register'))
@@ -63,7 +63,7 @@
                     <a href="#" class="text-gray-900 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">EVENTOS</a>
                     <a href="#" class="text-gray-900 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">CONTATO</a>
                     @auth
-                        <a href="{{ url('/dashboard') }}" class="bg-[#2A8A9D] text-white px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                        <a href="{{ url('/portal') }}" class="bg-[#2A8A9D] text-white px-3 py-2 rounded-md text-sm font-medium">Portal</a>
                     @else
                         <a href="{{ route('login') }}" class="bg-[#2A8A9D] text-white px-3 py-2 rounded-md text-sm font-medium">Log in</a>
                         @if (Route::has('register'))

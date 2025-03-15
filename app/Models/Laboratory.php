@@ -13,7 +13,7 @@ class Laboratory extends Model
         'name',
         'institution_id',
         'state_id',
-        'team_id'
+        'team_id',
     ];
 
     /**
@@ -37,9 +37,6 @@ class Laboratory extends Model
     protected static function booted()
     {
         static::creating(function ($laboratory) {
-            // Verificar se já existe um laboratório com esse nome, instituição e estado
-            // Se existir um com team_id nulo e estamos tentando criar um com team_id,
-            // podemos atualizar o existente em vez de criar um novo
             if ($laboratory->team_id) {
                 $existing = self::where('name', $laboratory->name)
                     ->where('institution_id', $laboratory->institution_id)
@@ -49,47 +46,32 @@ class Laboratory extends Model
 
                 if ($existing) {
                     $existing->update(['team_id' => $laboratory->team_id]);
-                    return false; // Impede a criação e usa o existente
+                    return false;
                 }
             }
         });
     }
 
-    /**
-     * Relacionamento com a instituição
-     */
     public function institution()
     {
         return $this->belongsTo(Institution::class);
     }
 
-    /**
-     * Relacionamento com o estado
-     */
     public function state()
     {
         return $this->belongsTo(State::class);
     }
 
-    /**
-     * Relacionamento com a equipe/time
-     */
     public function team()
     {
         return $this->belongsTo(Team::class);
     }
 
-    /**
-     * Relacionamento com perfis
-     */
     public function profiles()
     {
         return $this->hasMany(Profile::class);
     }
 
-    /**
-     * Escopo para pesquisa avançada
-     */
     public function scopeSearch($query, $term)
     {
         if ($term) {
@@ -102,5 +84,81 @@ class Laboratory extends Model
                 });
         }
         return $query;
+    }
+
+    // Acessores para puxar dados de teams
+    public function getDescriptionAttribute()
+    {
+        return $this->team->description ?? null;
+    }
+
+    public function getWebsiteAttribute()
+    {
+        return $this->team->website ?? null;
+    }
+
+    public function getAddressAttribute()
+    {
+        return $this->team->address ?? null;
+    }
+
+    public function getLatAttribute()
+    {
+        return $this->team->latitude ?? null;
+    }
+
+    public function getLngAttribute()
+    {
+        return $this->team->longitude ?? null;
+    }
+
+    public function getLogoAttribute()
+    {
+        return $this->team->logo ?? null;
+    }
+
+    public function getBuildingAttribute()
+    {
+        return $this->team->building ?? null;
+    }
+
+    public function getFloorAttribute()
+    {
+        return $this->team->floor ?? null;
+    }
+
+    public function getRoomAttribute()
+    {
+        return $this->team->room ?? null;
+    }
+
+    public function getDepartmentAttribute()
+    {
+        return $this->team->department ?? null;
+    }
+
+    public function getCampusAttribute()
+    {
+        return $this->team->campus ?? null;
+    }
+
+    public function getPhoneAttribute()
+    {
+        return $this->team->phone ?? null;
+    }
+
+    public function getContactEmailAttribute()
+    {
+        return $this->team->contact_email ?? null;
+    }
+
+    public function getWorkingHoursAttribute()
+    {
+        return $this->team->working_hours ?? null;
+    }
+
+    public function getHasAccessibilityAttribute()
+    {
+        return $this->team->has_accessibility ?? false;
     }
 }

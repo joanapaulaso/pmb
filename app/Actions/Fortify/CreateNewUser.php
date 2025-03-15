@@ -34,7 +34,7 @@ class CreateNewUser implements CreatesNewUsers
             'gender' => ['required', 'string'],
             'institution_address' => ['nullable', 'string', 'max:255'],
             'admin' => ['nullable', 'boolean'],
-            'team_id' => ['nullable', 'exists:teams,id'], // Adicionado campo team_id
+            'team_id' => ['nullable', 'exists:teams,id'],
         ])->validate();
 
         // Criar ou atualizar instituição com o endereço
@@ -59,7 +59,7 @@ class CreateNewUser implements CreatesNewUsers
                 $input['new_laboratory'],
                 $input['institution_id'] ?? null,
                 $input['state_id'] ?? null,
-                $input['team_id'] ?? null // Passando team_id
+                $input['team_id'] ?? null
             );
         }
 
@@ -81,6 +81,17 @@ class CreateNewUser implements CreatesNewUsers
             'laboratory_id' => $input['laboratory_id'] ?? null,
             'gender' => $input['gender'] ?? null,
         ]);
+
+        // Associar o usuário ao time, se team_id for fornecido
+        if (!empty($input['team_id'])) {
+            $team = \App\Models\Team::find($input['team_id']);
+            if ($team) {
+                $user->teams()->attach($team->id, ['created_at' => now(), 'updated_at' => now()]);
+                \Log::info("Usuário {$user->id} associado ao time {$team->id}");
+            } else {
+                \Log::warning("Time {$input['team_id']} não encontrado para associação com o usuário {$user->id}");
+            }
+        }
 
         if (!empty($input['selected_subcategories'])) {
             $this->saveUserCategories($user, $input['selected_subcategories']);

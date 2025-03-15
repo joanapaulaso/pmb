@@ -118,9 +118,9 @@ class PostPortalController extends Controller
         try {
             $validated = $request->validate([
                 'content' => 'required|max:10000', // Increased max size to handle HTML with images
-                'tag' => 'required|in:general,question,job,promotion,idea,collaboration,news,paper',
+                'tag' => 'required|in:geral,pergunta,oportunidade,divulgação,ideia,colaboração,notícia,publicação',
                 'additional_tags' => 'sometimes|array|max:2',
-                'additional_tags.*' => 'in:general,question,job,promotion,idea,collaboration,news,paper'
+                'additional_tags.*' => 'in:geral,pergunta,oportunidade,divulgação,ideia,colaboração,notícia,publicaçãor'
             ]);
 
             // Log validation success

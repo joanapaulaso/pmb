@@ -14,7 +14,7 @@
                         {{ __('Portal') }}
                     </x-nav-link>
                     <x-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
+                        {{ __('Comunidade') }}
                     </x-nav-link>
 
                     <!-- Recursos Dropdown -->
@@ -75,15 +75,15 @@
                                         @if(Auth::user()->currentTeam)
                                             <!-- Team Settings -->
                                             <x-dropdown-link href="{{ route('teams.show', Auth::user()->currentTeam->id) }}">
-                                                {{ __('Team Settings') }}
+                                                {{ __('Meu Laboratório') }}
                                             </x-dropdown-link>
                                         @endif
 
-                                        @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
+                                        {{-- @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
                                             <x-dropdown-link href="{{ route('teams.create') }}">
                                                 {{ __('Create New Team') }}
                                             </x-dropdown-link>
-                                        @endcan
+                                        @endcan --}}
 
                                         <!-- Team Switcher -->
                                         @if (Auth::user()->allTeams()->count() > 1)
@@ -136,12 +136,12 @@
                             </div>
 
                             <x-dropdown-link href="{{ route('profile.show') }}">
-                                {{ __('Profile') }}
+                                {{ __('Perfil') }}
                             </x-dropdown-link>
 
                             @if (Auth::user()->isAdmin())
                                 <x-dropdown-link href="{{ route('admin.dashboard') }}">
-                                    {{ __('Admin Panel') }}
+                                    {{ __('Painel Admin') }}
                                 </x-dropdown-link>
                             @endif
 
@@ -158,7 +158,7 @@
                                 @csrf
                                 <x-dropdown-link href="{{ route('logout') }}"
                                                  @click.prevent="$root.submit();">
-                                    {{ __('Log Out') }}
+                                    {{ __('Desconectar') }}
                                 </x-dropdown-link>
                             </form>
                         </x-slot>
@@ -233,12 +233,12 @@
 
             <div class="mt-3 space-y-1">
                 <x-responsive-nav-link href="{{ route('profile.show') }}" :active="request()->routeIs('profile.show')">
-                    {{ __('Profile') }}
+                    {{ __('Perfil') }}
                 </x-responsive-nav-link>
 
                 @if (Auth::user()->isAdmin())
                     <x-responsive-nav-link href="{{ route('admin.dashboard') }}" :active="request()->routeIs('admin.dashboard')">
-                        {{ __('Admin Panel') }}
+                        {{ __('Painel Admin') }}
                     </x-responsive-nav-link>
                 @endif
 
@@ -252,7 +252,7 @@
                     @csrf
                     <x-responsive-nav-link href="{{ route('logout') }}"
                                            @click.prevent="$root.submit();">
-                        {{ __('Log Out') }}
+                        {{ __('Desconectar') }}
                     </x-responsive-nav-link>
                 </form>
 
@@ -265,7 +265,7 @@
                     @if(Auth::user()->allTeams()->count() > 0)
                         @if(Auth::user()->currentTeam)
                             <x-responsive-nav-link href="{{ route('teams.show', Auth::user()->currentTeam->id) }}" :active="request()->routeIs('teams.show')">
-                                {{ __('Team Settings') }}
+                                {{ __('Meu Laboratório') }}
                             </x-responsive-nav-link>
                         @endif
 

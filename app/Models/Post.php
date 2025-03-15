@@ -12,12 +12,14 @@ class Post extends Model
         'additional_tags',
         'metadata',
         'parent_id',
-        'user_id'
+        'user_id',
+        'is_lab_publication'
     ];
 
     protected $casts = [
         'additional_tags' => 'array',
-        'metadata' => 'array'
+        'metadata' => 'array',
+        'is_lab_publication' => 'boolean'
     ];
 
     // Accessor to get all tags

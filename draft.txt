@@ -11,6 +11,8 @@ sail php artisan livewire:clear
 /opt/cloudlinux/alt-php83/root/usr/bin/php artisan route:clear
 /opt/cloudlinux/alt-php83/root/usr/bin/php artisan optimize:clear
 
+/opt/cloudlinux/alt-php83/root/usr/bin/php artisan migrate
+
 sail php artisan route:list | grep register
 sail php artisan import:data
 

@@ -19,9 +19,9 @@ class DashboardController extends Controller
         $tagColors = config('tags.colors', []);
         $tags = array_keys($tagColors);
 
-        if (empty($tags)) {
-            $tags = ['all', 'general', 'question', 'job', 'promotion', 'idea', 'collaboration', 'news', 'paper'];
-        }
+        // if (empty($tags)) {
+        //     $tags = ['all', 'general', 'question', 'job', 'promotion', 'idea', 'collaboration', 'news', 'paper'];
+        // }
 
         // Iniciar query base
         $query = Post::whereNull('parent_id') // Apenas posts principais, não respostas
@@ -64,9 +64,9 @@ class DashboardController extends Controller
         $tagColors = config('tags.colors', []);
         $tags = array_keys($tagColors);
 
-        if (empty($tags)) {
-            $tags = ['all', 'general', 'question', 'job', 'promotion', 'idea', 'collaboration', 'news', 'paper'];
-        }
+        // if (empty($tags)) {
+        //     $tags = ['all', 'general', 'question', 'job', 'promotion', 'idea', 'collaboration', 'news', 'paper'];
+        // }
 
         // Iniciar a consulta com posts principais
         $query = Post::whereNull('parent_id')

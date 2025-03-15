@@ -1,7 +1,7 @@
 <div x-data="{ showAddress: @entangle('showNewInstitution').defer, showAdditionalInfo: false }">
     <x-form-address-section submit="updateInstitutionAddress">
         <x-slot name="title">
-            {{ __('Endereço do Laboratório') }}
+            {{ __('Endereço') }}
         </x-slot>
 
         <x-slot name="description">

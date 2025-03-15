@@ -41,5 +41,13 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('addTeamMember', function ($user, $team) {
             return $user->ownsTeam($team) || $user->hasRole('admin'); // Ajuste conforme necessário
         });
+
+        Gate::define('viewDescription', function ($user, Team $team) {
+            return $user->belongsToTeam($team); // Exemplo: usuário deve pertencer ao time
+        });
+
+        Gate::define('updateDescription', function ($user, Team $team) {
+            return $user->ownsTeam($team); // Exemplo: apenas o dono do time pode atualizar
+        });
     }
 }

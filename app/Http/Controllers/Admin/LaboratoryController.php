@@ -81,53 +81,63 @@ class LaboratoryController extends Controller
             'lat' => 'nullable|numeric',
             'lng' => 'nullable|numeric',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'building' => 'nullable|string',
+            'floor' => 'nullable|string',
+            'room' => 'nullable|string',
+            'department' => 'nullable|string',
+            'campus' => 'nullable|string',
+            'phone' => 'nullable|string',
+            'contact_email' => 'nullable|email',
+            'working_hours' => 'nullable|string',
+            'has_accessibility' => 'boolean',
         ]);
 
         if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
         DB::beginTransaction();
-
         try {
-            // Create a team for this laboratory
+            // Criar a equipe (team) com os dados adicionais
             $team = new Team();
             $team->name = $request->name;
             $team->personal_team = false;
-            $team->user_id = auth()->id(); // Set the admin as the initial owner
+            $team->user_id = auth()->id();
+            $team->description = $request->description;
+            $team->website = $request->website;
+            $team->address = $request->address;
+            $team->latitude = $request->lat;
+            $team->longitude = $request->lng;
+            $team->building = $request->building;
+            $team->floor = $request->floor;
+            $team->room = $request->room;
+            $team->department = $request->department;
+            $team->campus = $request->campus;
+            $team->phone = $request->phone;
+            $team->contact_email = $request->contact_email;
+            $team->working_hours = $request->working_hours;
+            $team->has_accessibility = $request->has_accessibility ?? false;
+
+            if ($request->hasFile('logo')) {
+                $path = $request->file('logo')->store('laboratories', 'public');
+                $team->logo = $path;
+            }
+
             $team->save();
 
-            // Create the laboratory
+            // Criar o laboratório vinculado à equipe
             $laboratory = new Laboratory();
             $laboratory->name = $request->name;
             $laboratory->institution_id = $request->institution_id;
             $laboratory->state_id = $request->state_id;
-            $laboratory->description = $request->description;
-            $laboratory->website = $request->website;
-            $laboratory->address = $request->address;
-            $laboratory->lat = $request->lat;
-            $laboratory->lng = $request->lng;
             $laboratory->team_id = $team->id;
-
-            if ($request->hasFile('logo')) {
-                $path = $request->file('logo')->store('laboratories', 'public');
-                $laboratory->logo = $path;
-            }
-
             $laboratory->save();
 
             DB::commit();
-
-            return redirect()->route('admin.laboratories.index')
-                ->with('success', 'Laboratory created successfully');
+            return redirect()->route('admin.laboratories.index')->with('success', 'Laboratory created successfully');
         } catch (\Exception $e) {
             DB::rollback();
-
-            return redirect()->back()
-                ->with('error', 'Error creating laboratory: ' . $e->getMessage())
-                ->withInput();
+            return redirect()->back()->with('error', 'Error creating laboratory: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -137,9 +147,16 @@ class LaboratoryController extends Controller
      * @param  \App\Models\Laboratory  $laboratory
      * @return \Illuminate\View\View
      */
+    /**
+     * Show the form for editing the specified laboratory.
+     *
+     * @param  \App\Models\Laboratory  $laboratory
+     * @return \Illuminate\View\View
+     */
     public function edit(Laboratory $laboratory)
     {
-        // No longer need to pass institutions and states
+        // Carregar a relação 'team' junto com o laboratório
+        $laboratory->load('team');
         return view('admin.laboratories.edit', compact('laboratory'));
     }
 
@@ -162,54 +179,64 @@ class LaboratoryController extends Controller
             'lat' => 'nullable|numeric',
             'lng' => 'nullable|numeric',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'building' => 'nullable|string',
+            'floor' => 'nullable|string',
+            'room' => 'nullable|string',
+            'department' => 'nullable|string',
+            'campus' => 'nullable|string',
+            'phone' => 'nullable|string',
+            'contact_email' => 'nullable|email',
+            'working_hours' => 'nullable|string',
+            'has_accessibility' => 'boolean',
         ]);
 
         if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
         DB::beginTransaction();
-
         try {
+            // Atualizar o laboratório
             $laboratory->name = $request->name;
             $laboratory->institution_id = $request->institution_id;
             $laboratory->state_id = $request->state_id;
-            $laboratory->description = $request->description;
-            $laboratory->website = $request->website;
-            $laboratory->address = $request->address;
-            $laboratory->lat = $request->lat;
-            $laboratory->lng = $request->lng;
-
-            if ($request->hasFile('logo')) {
-                $path = $request->file('logo')->store('laboratories', 'public');
-                $laboratory->logo = $path;
-            }
-
             $laboratory->save();
 
-            // Update the team name if it exists
-            if ($laboratory->team_id) {
-                $team = Team::find($laboratory->team_id);
-                if ($team) {
-                    $team->name = $request->name;
-                    $team->save();
+            // Atualizar a equipe associada, se existir
+            if ($laboratory->team) {
+                $team = $laboratory->team;
+                $team->name = $request->name;
+                $team->description = $request->description;
+                $team->website = $request->website;
+                $team->address = $request->address;
+                $team->latitude = $request->lat;
+                $team->longitude = $request->lng;
+                $team->building = $request->building;
+                $team->floor = $request->floor;
+                $team->room = $request->room;
+                $team->department = $request->department;
+                $team->campus = $request->campus;
+                $team->phone = $request->phone;
+                $team->contact_email = $request->contact_email;
+                $team->working_hours = $request->working_hours;
+                $team->has_accessibility = $request->has_accessibility ?? false;
+
+                if ($request->hasFile('logo')) {
+                    $path = $request->file('logo')->store('laboratories', 'public');
+                    $team->logo = $path;
                 }
+
+                $team->save();
             }
 
             DB::commit();
-
-            return redirect()->route('admin.laboratories.index')
-                ->with('success', 'Laboratory updated successfully');
+            return redirect()->route('admin.laboratories.index')->with('success', 'Laboratory updated successfully');
         } catch (\Exception $e) {
             DB::rollback();
-
-            return redirect()->back()
-                ->with('error', 'Error updating laboratory: ' . $e->getMessage())
-                ->withInput();
+            return redirect()->back()->with('error', 'Error updating laboratory: ' . $e->getMessage())->withInput();
         }
     }
+
 
     /**
      * Remove the specified laboratory from storage.

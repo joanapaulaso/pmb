@@ -1,5 +1,3 @@
-<!-- Modificação para resources/views/post-form.blade.php -->
-
 @props(['tags'])
 
 @php
@@ -64,7 +62,8 @@
                 <div id="quill-editor" class="border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 transition-all duration-200" style="min-height: 100px;"></div>
             </div>
 
-            <div class="mb-3 relative">
+            <!-- Tag selection section -->
+            <div class="mb-6 relative">
                 <div class="flex items-center mb-2">
                     <div class="ml-2 flex flex-wrap gap-1">
                         <template x-for="(tag, index) in selectedTags" :key="index">
@@ -120,7 +119,7 @@
                     @click.away="close()"
                     class="absolute mt-1 w-full z-10 py-2"
                 >
-                    <div class="flex flex-wrap gap-1.5 px-2">
+                    <div class="flex flex-wrap gap-1.5 py-1 px-2 max-h-32 overflow-y-auto">
                         @foreach($tags as $tag)
                             @if($tag != 'all')
                                 <div
@@ -136,10 +135,47 @@
                 </div>
             </div>
 
-            <!-- First tag (always required) -->
-            <input type="hidden" name="tag" x-bind:value="selectedTags[0] || ''">
+            <!-- Conditional field for 'publicação' tag with radio buttons -->
+            <div x-show="selectedTags.includes('publicação')" class="mb-6 mt-16 p-4 bg-gray-50 rounded-lg shadow-sm">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Esta publicação pertence ao seu laboratório? <span class="text-red-500">*</span>
+                </label>
+                <div class="flex items-center space-x-6">
+                    <label class="flex items-center">
+                        <input
+                            type="radio"
+                            name="is_lab_publication"
+                            value="1"
+                            x-model="labPublication"
+                            class="mr-2"
+                            required
+                        >
+                        <span class="text-sm text-gray-700">Sim</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input
+                            type="radio"
+                            name="is_lab_publication"
+                            value="0"
+                            x-model="labPublication"
+                            class="mr-2"
+                            required
+                        >
+                        <span class="text-sm text-gray-700">Não</span>
+                    </label>
+                </div>
+                <div x-show="!labPublication && selectedTags.includes('publicação')" class="mt-2 text-sm text-red-600">
+                    Por favor, selecione uma opção.
+                </div>
+            </div>
 
-            <!-- Additional tags -->
+            <!-- Warning message for no tags -->
+            <div x-show="showTagWarning" class="mb-3 text-sm text-red-600">
+                Por favor, selecione pelo menos uma tag antes de postar.
+            </div>
+
+            <!-- Hidden inputs for tags -->
+            <input type="hidden" name="tag" x-bind:value="selectedTags[0] || ''">
             <template x-for="(tag, index) in selectedTags.slice(1)" :key="index">
                 <input type="hidden" name="additional_tags[]" :value="tag">
             </template>
@@ -161,24 +197,21 @@
             open: false,
             selectedTags: [],
             quill: null,
-            tagColors: @json($tagColors), // Use the colors from the config
+            tagColors: @json($tagColors),
+            showTagWarning: false,
+            labPublication: null, // State for lab publication selection
 
-            // Initialize
             init() {
-                // Initialize Quill after Alpine component is mounted
                 this.$nextTick(() => {
                     this.initQuill();
                 });
             },
 
-            // Initialize Quill editor
             initQuill() {
                 if (typeof Quill === 'undefined') {
                     console.error('Quill is not loaded');
                     return;
                 }
-
-                // Use a função global para inicializar o Quill com suporte a uploads
                 this.quill = window.initQuillWithImageUpload('#quill-editor', '#quill-toolbar', {
                     placeholder: 'Escreva seu post...',
                     modules: {
@@ -191,19 +224,22 @@
                 });
             },
 
-            // Submit form with Quill content
             submitForm() {
                 if (this.quill) {
-                    // Get content from Quill and set it to hidden input
+                    if (this.selectedTags.length === 0) {
+                        this.showTagWarning = true;
+                        return;
+                    }
+                    if (this.selectedTags.includes('publicação') && this.labPublication === null) {
+                        return; // Validation handled by HTML required attribute and x-show warning
+                    }
+                    this.showTagWarning = false;
                     const content = this.quill.root.innerHTML;
                     this.$refs.contentInput.value = content;
-
-                    // Submit the form
                     this.$refs.postForm.submit();
                 }
             },
 
-            // Tag functions
             toggle() {
                 this.open = !this.open;
             },
@@ -216,6 +252,7 @@
                 } else {
                     this.addTag(tag);
                 }
+                this.showTagWarning = false;
             },
             addTag(tag) {
                 if (this.selectedTags.length < 3 && !this.selectedTags.includes(tag)) {

@@ -50,7 +50,7 @@ class RegisterComponent extends Component
     public function mount()
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect()->route('portal');
         }
 
         // Set default country to Brazil if not international
@@ -132,32 +132,24 @@ class RegisterComponent extends Component
     public function updatedIsInternational($value)
     {
         if ($value) {
-            // User is not from Brazil
             $this->state_id = null;
             $this->municipality_id = null;
             $this->country_code = null;
         } else {
-            // User is from Brazil
             $this->country_code = 'BR';
         }
 
-        // Reset dependent fields
         $this->institution_id = null;
         $this->laboratory_id = null;
-
-        // Broadcast changes to dependent components
-        $this->dispatch('dependencyChanged');
+        $this->dispatch('dependencyChanged', 'country_code', $this->country_code);
     }
 
     public function updatedStateId()
     {
-        // Reset dependent fields when state changes
         $this->municipality_id = null;
         $this->institution_id = null;
         $this->laboratory_id = null;
-
-        // Broadcast changes to dependent components
-        $this->dispatch('dependencyChanged');
+        $this->dispatch('dependencyChanged', 'state_id', $this->state_id);
     }
 
     public function updatedInstitutionId($value)
@@ -170,19 +162,25 @@ class RegisterComponent extends Component
 
     public function optionSelected($data)
     {
-        Log::info("Option selected in parent: " . json_encode($data));
-
+        \Log::info("Evento optionSelected recebido no RegisterComponent: " . json_encode($data));
         if (isset($data['field']) && property_exists($this, $data['field'])) {
             $this->{$data['field']} = $data['value'];
 
             if ($data['field'] === 'state_id') {
                 $this->municipality_id = null;
+                $this->institution_id = null;
+                $this->laboratory_id = null;
+                $this->dispatch('dependencyChanged', 'state_id', $this->state_id);
             } else if ($data['field'] === 'country_code') {
                 $this->state_id = null;
                 $this->municipality_id = null;
+                $this->institution_id = null;
+                $this->laboratory_id = null;
+                $this->dispatch('dependencyChanged', 'country_code', $this->country_code);
             } else if ($data['field'] === 'institution_id') {
-                // Quando uma instituição é selecionada, limpar o campo de endereço
+                $this->laboratory_id = null;
                 $this->institution_address = '';
+                $this->dispatch('dependencyChanged', 'institution_id', $this->institution_id);
             }
         }
     }
@@ -195,7 +193,14 @@ class RegisterComponent extends Component
     public function submit()
     {
         try {
-            // Regras de validação básicas
+            \Log::info('Estado completo antes da validação:', $this->all());
+            \Log::info('Valores específicos antes da validação:', [
+                'state_id' => $this->state_id,
+                'municipality_id' => $this->municipality_id,
+                'institution_id' => $this->institution_id,
+                'isInternational' => $this->isInternational,
+            ]);
+
             $rules = [
                 'full_name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
@@ -203,33 +208,28 @@ class RegisterComponent extends Component
                 'birth_date' => 'nullable|date',
                 'country_code' => 'required|string|max:2|exists:countries,code',
                 'gender' => 'required|string',
-                'institution_address' => 'nullable|string|max:255', // Novo campo de endereço (opcional)
+                'institution_address' => 'nullable|string|max:255',
             ];
 
-            // Regras condicionais para localização (se usuário for do Brasil)
             if (!$this->isInternational) {
                 $rules['state_id'] = 'required|exists:states,id';
                 $rules['municipality_id'] = 'required|exists:municipalities,id';
             }
 
-            // Regras condicionais para instituição
             if ($this->showNewInstitution) {
                 $rules['new_institution'] = 'required|string|max:255';
             } else {
                 $rules['institution_id'] = 'required|exists:institutions,id';
             }
 
-            // Regras condicionais para laboratório
             if ($this->showNewLaboratory) {
                 $rules['new_laboratory'] = 'required|string|max:255';
-            } else if (!$this->showNewInstitution) {
+            } elseif (!$this->showNewInstitution) {
                 $rules['laboratory_id'] = 'required|exists:laboratories,id';
             }
 
-            // Executar a validação
             $this->validate($rules);
 
-            // Preparar os dados a serem enviados para CreateNewUser
             $data = [
                 'full_name' => $this->full_name,
                 'email' => $this->email,
@@ -246,17 +246,15 @@ class RegisterComponent extends Component
                 'lab_coordinator' => $this->lab_coordinator,
                 'isInternational' => $this->isInternational,
                 'gender' => $this->gender,
-                'institution_address' => $this->institution_address, // Novo campo adicionado
+                'institution_address' => $this->institution_address,
             ];
 
-            // Adicionar subcategorias, se houver
             if (!empty($this->selectedSubcategories)) {
                 $data['selected_subcategories'] = $this->selectedSubcategories;
             }
 
             Log::info('Dados enviados para CreateNewUser:', $data);
 
-            // Criar o usuário usando a ação CreateNewUser
             $createNewUser = new CreateNewUser();
             $user = $createNewUser->create($data);
 
@@ -266,7 +264,6 @@ class RegisterComponent extends Component
 
             Log::info('Usuário criado com sucesso:', ['user_id' => $user->id, 'user_data' => $user->toArray()]);
 
-            // Determinar o nome do laboratório e criar o laboratório, se necessário
             $laboratoryName = null;
             $laboratory = null;
 
@@ -287,16 +284,14 @@ class RegisterComponent extends Component
                 Log::info('Laboratório existente selecionado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
             }
 
-            // Criar equipe (team) se houver um laboratório
             if ($laboratoryName) {
                 $createTeam = new CreateTeam();
                 $teamInput = [
                     'name' => $laboratoryName,
-                    'address' => $this->institution_address, // Endereço inicial definido pelo coordenador
+                    'address' => $this->institution_address,
                 ];
                 $team = $createTeam->create($user, $teamInput);
 
-                // Garantir que personal_team seja falso
                 if ($team->personal_team) {
                     $team->update(['personal_team' => false]);
                 }
@@ -307,14 +302,17 @@ class RegisterComponent extends Component
                     'user_id' => $team->user_id,
                 ]);
 
-                // Associar o laboratório ao time
                 if ($laboratory && !$laboratory->team_id) {
                     $laboratory->team_id = $team->id;
                     $laboratory->save();
                     Log::info('Laboratório associado ao Team:', ['laboratory_id' => $laboratory->id, 'team_id' => $team->id]);
                 }
 
-                // Adicionar o usuário como membro da equipe, exceto se for o coordenador
+                // Associar o usuário ao time na tabela team_user
+                $user->teams()->attach($team->id, ['created_at' => now(), 'updated_at' => now()]);
+                Log::info("Usuário {$user->id} associado ao time {$team->id} na tabela team_user");
+
+                // Se for coordenador, o usuário já é o dono; se não, adicionar como membro
                 if (!$this->lab_coordinator) {
                     $role = 'editor'; // Papel padrão do Jetstream
                     $addTeamMember = new AddTeamMember();
@@ -323,7 +321,7 @@ class RegisterComponent extends Component
                         Log::info('Usuário vinculado ao Team com papel:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $role]);
                     } catch (\Exception $e) {
                         Log::error('Erro ao vincular usuário ao Team:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-                        throw new \Exception('Falha ao vincular o usuário ao Team: ' . $e->getMessage());
+                        // Continuar mesmo com erro, pois a associação manual já foi feita
                     }
                 } else {
                     Log::info('Usuário é o coordenador e já é o dono do time; nenhuma ação adicional necessária.', ['user_id' => $user->id, 'team_id' => $team->id]);
@@ -332,22 +330,24 @@ class RegisterComponent extends Component
                 Log::warning('Nenhum laboratório definido para criar o Team.');
             }
 
-            // Verificar se o usuário é autenticável antes de fazer login
             if (!($user instanceof \Illuminate\Contracts\Auth\Authenticatable)) {
                 throw new \Exception('O objeto User não implementa Authenticatable.');
             }
 
-            // Fazer login e redirecionar
             Auth::login($user);
             Log::info('Login realizado com sucesso para o usuário:', ['user_id' => $user->id]);
-            return redirect()->route('dashboard')->with('message', 'Conta criada e login realizado com sucesso!');
+            return redirect()->route('portal')->with('message', 'Conta criada e login realizado com sucesso!');
         } catch (\Exception $e) {
-            Log::error('Erro ao registrar usuário: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            \Log::error('Erro ao registrar usuário: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             session()->flash('error', 'Ocorreu um erro ao criar sua conta. Por favor, tente novamente.');
             return null;
         }
     }
 
+    public function debugState()
+    {
+        Log::info('Estado atual do RegisterComponent:', $this->all());
+    }
 
     public function render()
     {

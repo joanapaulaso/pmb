@@ -100,6 +100,7 @@ Route::middleware($authMiddleware)->group(function () {
 
     // Rota de API para dados dos laboratórios
     Route::get('/api/labs', [LabsMapController::class, 'getLabsData'])->name('api.labs');
+    Route::get('/labs/{team}', [LabsMapController::class, 'show'])->name('labs.show');
 
     Route::post('/upload-image', [App\Http\Controllers\ImageUploadController::class, 'upload'])
         ->middleware(['auth'])

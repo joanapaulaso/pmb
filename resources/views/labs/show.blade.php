@@ -1,0 +1,202 @@
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ $labData['name'] }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
+                <div class="p-6">
+                    <!-- Card com informações principais -->
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">{{ $labData['name'] }}</h3>
+                        <p class="text-sm text-gray-600 mb-4">{{ $labData['formatted_address'] }}</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <h4 class="text-sm font-semibold mb-1">Localização</h4>
+                                <p class="text-sm">
+                                    @if ($labData['details']['building']) Prédio: {{ $labData['details']['building'] }}<br> @endif
+                                    @if ($labData['details']['floor']) Andar: {{ $labData['details']['floor'] }}<br> @endif
+                                    @if ($labData['details']['room']) Sala: {{ $labData['details']['room'] }}<br> @endif
+                                    @if ($labData['details']['department']) Departamento: {{ $labData['details']['department'] }}<br> @endif
+                                    @if ($labData['details']['campus']) Campus: {{ $labData['details']['campus'] }} @endif
+                                </p>
+                            </div>
+
+                            <div>
+                                <h4 class="text-sm font-semibold mb-1">Contato</h4>
+                                <p class="text-sm">
+                                    @if ($labData['details']['phone']) Telefone: {{ $labData['details']['phone'] }}<br> @endif
+                                    @if ($labData['details']['contact_email']) Email: {{ $labData['details']['contact_email'] }} @endif
+                                </p>
+                            </div>
+
+                            <div>
+                                <h4 class="text-sm font-semibold mb-1">Horário</h4>
+                                <p class="text-sm">{{ $labData['details']['working_hours'] ?? 'Não informado' }}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex space-x-4">
+                            @if ($labData['details']['website'])
+                                <a href="{{ $labData['details']['website'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm">Visitar website</a>
+                            @endif
+                            @if ($labData['coordinates'])
+                                <a href="https://www.google.com/maps/dir/?api=1&destination={{ $labData['coordinates']['lat'] }},{{ $labData['coordinates']['lng'] }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm">Como chegar</a>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Seção de Posts -->
+                    <div class="mt-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Postagens do Laboratório</h3>
+
+                        <!-- Filtro de Tags -->
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            @foreach($tags as $tag)
+                                <button type="button"
+                                        class="tag-button inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold {{ in_array($tag, $selectedTags) ? 'bg-gray-800 text-white' : $tagColors[$tag] }}"
+                                        data-tag="{{ $tag }}"
+                                        data-original-styles="{{ $tagColors[$tag] }}">
+                                    #{{ $tag }}
+                                </button>
+                            @endforeach
+                        </div>
+
+                        <!-- Filtro para publicações do laboratório (novo design corrigido) -->
+                        <div class="mb-4">
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox"
+                                       id="lab-filter-toggle"
+                                       class="hidden peer"
+                                       data-active="{{ request()->query('lab_filter', 'false') === 'true' ? 'true' : 'false' }}"
+                                       @if (request()->query('lab_filter', 'false') === 'true') checked @endif>
+                                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-300 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-300 peer-checked:bg-indigo-600 dark:peer-checked:bg-indigo-600"></div>
+                                <span class="text-sm font-medium text-gray-600 peer-checked:text-indigo-600 transition-colors duration-300">
+                                    Ver apenas publicações de membros
+                                </span>
+                            </label>
+                        </div>
+
+                        <input type="hidden" id="selected-tags" value="{{ implode(',', $selectedTags) }}">
+                        <input type="hidden" id="lab-filter" value="{{ request()->query('lab_filter', 'false') }}">
+
+                        <!-- Lista de Posts -->
+                        <div id="posts-container">
+                            @include('components.labs-post-list', ['posts' => $posts, 'tags' => $tags, 'selectedTags' => $selectedTags])
+                        </div>
+
+                        <!-- Paginação -->
+                        <div class="mt-6">
+                            {{ $posts->links() }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configurações para filtro de tags
+        window.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        window.tagColors = @json($tagColors);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.tag-button').forEach(button => {
+                const tag = button.getAttribute('data-tag');
+                button.addEventListener('click', function() {
+                    window.toggleTag(this, tag);
+                });
+            });
+
+            // Inicializar o toggle do filtro de laboratório
+            const labFilterToggle = document.getElementById('lab-filter-toggle');
+            const labFilterInput = document.getElementById('lab-filter');
+            const isLabFilterActive = labFilterInput.value === 'true';
+            updateLabFilterButtonStyle(labFilterToggle, isLabFilterActive);
+
+            labFilterToggle.addEventListener('change', function() {
+                const isActive = this.checked;
+                labFilterInput.value = isActive.toString();
+                updateLabFilterButtonStyle(this, isActive);
+
+                const selectedTagsInput = document.getElementById('selected-tags');
+                const selectedTags = selectedTagsInput.value ? selectedTagsInput.value.split(',') : [];
+                const queryParams = new URLSearchParams({
+                    tags: selectedTags.join(','),
+                    lab_filter: isActive.toString()
+                }).toString();
+                window.location.href = `/labs/{{ $labData['id'] }}?${queryParams}`;
+            });
+        });
+
+        window.toggleTag = function(element, tag) {
+            const selectedTagsInput = document.getElementById('selected-tags');
+            let selectedTags = selectedTagsInput.value ? selectedTagsInput.value.split(',') : [];
+
+            if (tag === 'all') {
+                if (selectedTags.includes('all')) {
+                    selectedTags = [];
+                    document.querySelectorAll('.tag-button').forEach(btn => {
+                        btn.classList.remove('bg-gray-800', 'text-white');
+                        const originalStyles = btn.getAttribute('data-original-styles');
+                        if (originalStyles) originalStyles.split(' ').forEach(cls => btn.classList.add(cls));
+                    });
+                } else {
+                    selectedTags = ['all'];
+                    document.querySelectorAll('.tag-button').forEach(btn => {
+                        const btnTag = btn.getAttribute('data-tag');
+                        const originalStyles = btn.getAttribute('data-original-styles');
+                        if (originalStyles) originalStyles.split(' ').forEach(cls => btn.classList.remove(cls));
+                        btn.classList.toggle('bg-gray-800', btnTag === 'all');
+                        btn.classList.toggle('text-white', btnTag === 'all');
+                        if (btnTag !== 'all' && originalStyles) originalStyles.split(' ').forEach(cls => btn.classList.add(cls));
+                    });
+                }
+            } else {
+                if (selectedTags.includes('all')) {
+                    selectedTags = selectedTags.filter(t => t !== 'all');
+                    const allBtn = document.querySelector('.tag-button[data-tag="all"]');
+                    if (allBtn) {
+                        allBtn.classList.remove('bg-gray-800', 'text-white');
+                        const originalStyles = allBtn.getAttribute('data-original-styles');
+                        if (originalStyles) originalStyles.split(' ').forEach(cls => allBtn.classList.add(cls));
+                    }
+                }
+
+                if (selectedTags.includes(tag)) {
+                    selectedTags = selectedTags.filter(t => t !== tag);
+                    element.classList.remove('bg-gray-800', 'text-white');
+                    const originalStyles = element.getAttribute('data-original-styles');
+                    if (originalStyles) originalStyles.split(' ').forEach(cls => element.classList.add(cls));
+                } else if (selectedTags.length < 3) {
+                    selectedTags.push(tag);
+                    const originalStyles = element.getAttribute('data-original-styles');
+                    if (originalStyles) originalStyles.split(' ').forEach(cls => element.classList.remove(cls));
+                    element.classList.add('bg-gray-800', 'text-white');
+                }
+            }
+
+            selectedTagsInput.value = selectedTags.join(',');
+            const labFilter = document.getElementById('lab-filter').value;
+            const queryParams = new URLSearchParams({
+                tags: selectedTags.join(','),
+                lab_filter: labFilter
+            }).toString();
+            window.location.href = `/labs/{{ $labData['id'] }}?${queryParams}`;
+        };
+
+        function updateLabFilterButtonStyle(element, isActive) {
+            const parentLabel = element.parentElement;
+            const textSpan = parentLabel.querySelector('span.text-sm');
+            if (isActive) {
+                textSpan.classList.add('text-indigo-600');
+            } else {
+                textSpan.classList.remove('text-indigo-600');
+            }
+        }
+    </script>
+</x-app-layout>

@@ -1,7 +1,7 @@
 <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full p-8 bg-white rounded-lg shadow-md">
         <div class="p-5 shrink-0 flex items-center justify-center">
-            <a href="{{ route('dashboard') }}">
+            <a href="{{ route('portal') }}">
                 <x-application-mark class="block h-9 w-auto" />
             </a>
         </div>

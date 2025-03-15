@@ -16,6 +16,13 @@
 
     <!-- Styles -->
     @livewireStyles
+
+    <!-- Google Maps API Loader -->
+    <gmpx-api-loader key="AIzaSyD4xIxoKPy81-hrL8IXLqhQoMmtQoXqVLY" solution-channel="GMP_GE_mapsandplacesautocomplete_v2"></gmpx-api-loader>
+
+    <!-- Extended Component Library -->
+    <script type="module" src="https://unpkg.com/@googlemaps/extended-component-library@0.6/dist/index.min.js"></script>
+
 </head>
 <body class="font-sans antialiased">
     <div class="min-h-screen bg-gray-100">
@@ -74,7 +81,7 @@
                     </div>
 
                     <div class="mt-10 pt-6 border-t border-gray-100">
-                        <a href="{{ route('dashboard') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-100">
+                        <a href="{{ route('portal') }}" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-100">
                             <div class="flex items-center">
                                 <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
@@ -92,7 +99,7 @@
                                     <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                                     </svg>
-                                    <span>Logout</span>
+                                    <span>Desconectar</span>
                                 </div>
                             </a>
                         </form>

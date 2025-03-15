@@ -58,36 +58,26 @@ class SearchSelect extends Component
         $this->selectedId = $idOrCode;
         $this->search = $modelClass::where($primaryKey, $idOrCode)->value('name') ?? '';
 
-        // Dispatch event to parent component
+        // Dispatch event to parent component (sem restrição de destino)
         $this->dispatch('optionSelected', [
             'field' => $this->field,
             'value' => $idOrCode
-        ])->to('admin.admin-laboratory-form'); // Especificar o componente pai
+        ]);
     }
 
     // Handle dependency changes from other components
     public function dependencyChanged($field, $value)
     {
+        \Log::info("SearchSelect {$this->field} recebeu dependencyChanged para {$field} com valor {$value}");
         if (array_key_exists($field, $this->dependsOn)) {
-            \Log::info("SearchSelect {$this->field} updating dependency {$field} to {$value}");
-
-            // Atualizar a dependência
+            \Log::info("SearchSelect {$this->field} atualizando dependência {$field} para {$value}");
             $this->dependsOn[$field] = $value;
-
-            // Resetar a seleção atual já que a dependência mudou
             $this->selectedId = null;
             $this->search = '';
-
-            // Garantir que o filtro está ativo
             $this->filterActive = true;
-
-            // Notificar o componente pai sobre o reset
-            $this->dispatch('optionSelected', [
-                'field' => $this->field,
-                'value' => null
-            ])->to('admin.admin-laboratory-form');
+            $this->dispatch('optionSelected', ['field' => $this->field, 'value' => null]);
         } else {
-            \Log::warning("SearchSelect {$this->field} received dependencyChanged for unknown field: {$field}");
+            \Log::warning("SearchSelect {$this->field} recebeu dependencyChanged para campo desconhecido: {$field}");
         }
     }
 

@@ -1,6 +1,5 @@
 <?php
 
-// In your PostController
 namespace App\Http\Controllers;
 
 use App\Models\Post;
@@ -59,6 +58,7 @@ class PostController extends Controller
                     'additional_tags' => $post->additional_tags ?? [],
                     'tag_colors' => $tagColors, // Pass all tag colors
                     'metadata' => $post->metadata ?? [],
+                    'is_lab_publication' => $post->is_lab_publication ?? false, // Adicionar nova propriedade
                     'created_at_diff' => $post->created_at->diffForHumans(),
                     'can_delete' => auth()->check() && auth()->user()->can('delete', $post),
                     'reply_url' => route('posts.reply', $post),
@@ -109,9 +109,10 @@ class PostController extends Controller
     {
         $validated = $request->validate([
             'content' => 'required|max:5000',
-            'tag' => 'required|in:general,question,job,promotion,idea,collaboration,news,paper',
+            'tag' => 'required|in:geral,pergunta,oportunidade,divulgação,ideia,colaboração,notícia,publicação',
             'additional_tags' => 'sometimes|array|max:2',
-            'additional_tags.*' => 'in:general,question,job,promotion,idea,collaboration,news,paper'
+            'additional_tags.*' => 'in:geral,pergunta,oportunidade,divulgação,ideia,colaboração,notícia,publicação',
+            'is_lab_publication' => 'required|boolean' // Validação para a nova coluna
         ]);
 
         // Sanitize HTML content
@@ -126,11 +127,10 @@ class PostController extends Controller
 
             // Procurar URLs no conteúdo que não sejam localhost
             if (preg_match('/\bhttps?:\/\/(?!localhost)\S+/i', $content, $match)) {
-                $url = $match[0]; // URL encontrada no texto
+                $url = $match[0];
                 $shouldExtractLink = true;
             } elseif (preg_match('/href=["\']([^"\']+)["\']/i', $content, $match)) {
                 $possibleUrl = $match[1];
-                // Verificar se não é localhost
                 if (strpos($possibleUrl, 'localhost') === false) {
                     $url = $possibleUrl;
                     $shouldExtractLink = true;
@@ -139,7 +139,6 @@ class PostController extends Controller
 
             // Só extrair metadados se for uma URL válida e não for localhost
             if ($shouldExtractLink && $url) {
-                // Usar try-catch específico para o serviço de link preview
                 try {
                     $metadata = $this->linkPreviewService->getPreview($url);
                     \Log::info('Preview obtido com sucesso', ['url' => $url]);
@@ -148,8 +147,6 @@ class PostController extends Controller
                         'url' => $url,
                         'error' => $e->getMessage()
                     ]);
-
-                    // Usar um preview padrão em caso de erro
                     $metadata = [
                         'url' => $url,
                         'title' => parse_url($url, PHP_URL_HOST) ?: 'Link',
@@ -166,12 +163,13 @@ class PostController extends Controller
         }
 
         try {
-            // Create the post with additional tags
+            // Create the post with additional tags and is_lab_publication
             $post = $request->user()->posts()->create([
                 'content' => $content,
                 'tag' => $validated['tag'],
                 'additional_tags' => $request->input('additional_tags', []),
-                'metadata' => $metadata
+                'metadata' => $metadata,
+                'is_lab_publication' => $validated['is_lab_publication'] // Salvar a nova coluna
             ]);
 
             return redirect()->route('dashboard');
@@ -192,7 +190,7 @@ class PostController extends Controller
         \Log::info('Reply attempt', ['user' => $request->user()->id, 'post' => $post->id, 'content' => $request->content]);
 
         $validated = $request->validate([
-            'content' => 'required|max:5000', // Aumentado para suportar HTML
+            'content' => 'required|max:5000',
         ]);
 
         // Sanitize HTML content for reply
@@ -225,15 +223,14 @@ class PostController extends Controller
             preg_match('/href=["\']([^"\']+)["\']/i', $content, $match)
         ) {
             if (isset($match[1])) {
-                $url = $match[1]; // URL do atributo href
+                $url = $match[1];
             } else {
-                $url = $match[0]; // URL direta
+                $url = $match[0];
             }
 
             try {
                 $metadata = $this->linkPreviewService->getPreview($url);
 
-                // Garantir que temos todos os campos necessários para evitar "undefined"
                 if (!isset($metadata['url'])) $metadata['url'] = $url;
                 if (!isset($metadata['title'])) $metadata['title'] = 'Link';
                 if (!isset($metadata['description'])) $metadata['description'] = '';
@@ -242,7 +239,6 @@ class PostController extends Controller
                     'url' => $url,
                     'error' => $e->getMessage()
                 ]);
-                // Criar metadata básico se o serviço falhar
                 $metadata = [
                     'url' => $url,
                     'title' => 'Link',
@@ -251,11 +247,10 @@ class PostController extends Controller
             }
         }
 
-        // Só salvar metadata se tiver os campos essenciais
         if (!empty($metadata) && isset($metadata['url']) && isset($metadata['title'])) {
             $reply->metadata = $metadata;
         } else {
-            $reply->metadata = null; // Garantir que seja null em vez de array vazio
+            $reply->metadata = null;
         }
 
         $reply->save();
@@ -281,31 +276,19 @@ class PostController extends Controller
 
     /**
      * Limpeza adicional do HTML para remover pontos após imagens e prevenir links indesejados
-     *
-     * @param string $html
-     * @return string
      */
     protected function cleanupHtml($html)
     {
-        // Se o HTML estiver vazio, retornar
         if (empty($html)) {
             return '';
         }
 
-        // Remover pontos após as tags de imagem
         $html = preg_replace('/<img([^>]*)>\s*\.\s*/', '<img$1>', $html);
-
-        // Remover qualquer menção a localhost como um link (mantendo o texto)
         $html = preg_replace('/<a[^>]*localhost[^>]*>([^<]*)<\/a>/', '$1', $html);
-
-        // Remover cores e estilos de qualquer texto que contenha apenas um ponto
         $html = preg_replace('/<([a-z]+)[^>]*>\s*\.\s*<\/\1>/', '.', $html);
 
-        // Corrigir problema em que a imagem pode estar dentro de tags extras
         $pattern = '/<([a-z]+)[^>]*>\s*(<img[^>]*>)\s*<\/\1>/i';
         $replacement = '$2';
-
-        // Repete até que não haja mais alterações (para tratar aninhamentos)
         $oldHtml = '';
         while ($oldHtml !== $html) {
             $oldHtml = $html;
@@ -320,7 +303,6 @@ class PostController extends Controller
      */
     protected function sanitizeHtml($html)
     {
-        // Lista de tags permitidas
         $allowedTags = [
             'p',
             'br',
@@ -350,67 +332,49 @@ class PostController extends Controller
             'sub'
         ];
 
-        // Configurar HTMLPurifier
         if (class_exists('\HTMLPurifier')) {
             try {
                 $config = \HTMLPurifier_Config::createDefault();
-
-                // Definições importantes
                 $config->set('Core.Encoding', 'UTF-8');
                 $config->set('HTML.Doctype', 'HTML 4.01 Transitional');
                 $config->set('Cache.SerializerPath', storage_path('app/purifier'));
 
-                // Criar diretório de cache se não existir
                 if (!file_exists(storage_path('app/purifier'))) {
                     mkdir(storage_path('app/purifier'), 0755, true);
                 }
 
-                // Configurações CSS
                 $config->set('CSS.AllowedProperties', 'font,font-size,font-weight,font-style,font-family,text-decoration,padding-left,color,background-color,text-align');
                 $config->set('CSS.AllowTricky', true);
-
-                // Configurações de segurança
                 $config->set('HTML.Trusted', true);
                 $config->set('Core.EscapeInvalidTags', true);
                 $config->set('HTML.SafeIframe', true);
                 $config->set('URI.SafeIframeRegexp', '%^(https?:)?//(www\.youtube(?:-nocookie)?\.com/embed/|player\.vimeo\.com/video/)%');
 
-                // Configurar tags e atributos permitidos
                 $def = $config->getHTMLDefinition(true);
-
-                // Permitir atributos src, alt, class para imagens
                 $def->addAttribute('img', 'src', 'URI');
                 $def->addAttribute('img', 'alt', 'Text');
                 $def->addAttribute('img', 'class', 'CDATA');
                 $def->addAttribute('img', 'width', 'Number');
                 $def->addAttribute('img', 'height', 'Number');
-
-                // Permitir atributos href, target para links
                 $def->addAttribute('a', 'href', 'URI');
                 $def->addAttribute('a', 'target', 'Enum#_blank,_self,_target,_top');
                 $def->addAttribute('a', 'rel', 'CDATA');
 
-                // Permitir atributos class e style para várias tags
                 foreach ($allowedTags as $tag) {
                     $def->addAttribute($tag, 'class', 'CDATA');
                     $def->addAttribute($tag, 'style', 'CDATA');
                 }
 
-                // Executar purificação
                 $purifier = new \HTMLPurifier($config);
                 $clean = $purifier->purify($html);
-
-                // Limpeza adicional para remover pontos após imagens e links indesejados
                 return $this->cleanupHtml($clean);
             } catch (\Exception $e) {
                 \Log::error('Erro no HTMLPurifier: ' . $e->getMessage());
-                // Em caso de erro, fallback para strip_tags
                 $stripped = strip_tags($html, '<' . implode('><', $allowedTags) . '>');
                 return $this->cleanupHtml($stripped);
             }
         }
 
-        // Fallback caso HTMLPurifier não esteja disponível
         $stripped = strip_tags($html, '<' . implode('><', $allowedTags) . '>');
         return $this->cleanupHtml($stripped);
     }
@@ -425,7 +389,7 @@ class PostController extends Controller
 
         return redirect()->back()->with('success', 'Post deleted successfully');
     }
-    // Handle reply deletion
+
     public function destroyReply(Post $reply)
     {
         $this->authorize('delete', $reply);
