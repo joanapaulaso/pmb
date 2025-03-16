@@ -41,8 +41,8 @@ class CreateNewUser implements CreatesNewUsers
         if (!empty($input['new_institution'])) {
             $institution = Institution::create([
                 'name' => $input['new_institution'],
-                'state_id' => $input['state_id'] ?? null,
-                'municipality_id' => $input['municipality_id'] ?? null,
+                'state_id' => $input['isInternational'] ? null : ($input['state_id'] ?? null),
+                'municipality_id' => $input['isInternational'] ? null : ($input['municipality_id'] ?? null),
                 'country_code' => $input['country_code'] ?? 'BR',
                 'address' => $input['institution_address'] ?? null,
             ]);
@@ -67,7 +67,7 @@ class CreateNewUser implements CreatesNewUsers
             'name' => $input['full_name'],
             'email' => $input['email'],
             'password' => Hash::make($input['password']),
-            'admin' => isset($input['admin']) ? (bool)$input['admin'] : false,
+            'admin' => isset($input['admin']) ? (bool) $input['admin'] : false,
         ]);
 
         Profile::create([
@@ -159,24 +159,33 @@ class CreateNewUser implements CreatesNewUsers
      */
     private function getOrCreateLaboratory($labName, $institutionId, $stateId, $teamId = null)
     {
-        if (!$labName || !$institutionId || !$stateId) {
+        if (!$labName || !$institutionId) {
+            \Log::warning("Dados insuficientes para criar laboratório: labName={$labName}, institutionId={$institutionId}");
             return null; // Se faltar algum dado essencial, retorna null
         }
 
-        // Verifica se a instituição realmente pertence ao estado selecionado
-        $institution = Institution::where('id', $institutionId)
-            ->where('state_id', $stateId)
-            ->first();
-
+        // Verifica se a instituição existe
+        $institution = Institution::find($institutionId);
         if (!$institution) {
-            \Log::warning("Instituição ID {$institutionId} não encontrada no estado {$stateId}");
+            \Log::warning("Instituição ID {$institutionId} não encontrada");
+            return null;
+        }
+
+        // Para usuários do Brasil, validar o estado
+        if ($institution->country_code === 'BR' && !$stateId) {
+            \Log::warning("Estado é obrigatório para laboratórios de instituições brasileiras");
             return null;
         }
 
         // Constrói a consulta base
         $query = Laboratory::where('name', $labName)
-            ->where('institution_id', $institution->id)
-            ->where('state_id', $stateId);
+            ->where('institution_id', $institution->id);
+
+        if ($institution->country_code === 'BR') {
+            $query->where('state_id', $stateId);
+        } else {
+            $query->whereNull('state_id');
+        }
 
         // Se team_id for fornecido, adiciona à consulta
         if ($teamId) {
@@ -193,10 +202,11 @@ class CreateNewUser implements CreatesNewUsers
                 $laboratory = Laboratory::create([
                     'name' => $labName,
                     'institution_id' => $institution->id,
-                    'state_id' => $stateId,
+                    'state_id' => $institution->country_code === 'BR' ? $stateId : null,
                     'team_id' => $teamId,
                 ]);
-                \Log::info("Novo laboratório '{$labName}' criado para a instituição '{$institution->name}' no estado {$stateId}" .
+                \Log::info("Novo laboratório '{$labName}' criado para a instituição '{$institution->name}'" .
+                    ($institution->country_code === 'BR' ? " no estado {$stateId}" : " (internacional)") .
                     ($teamId ? " e time {$teamId}" : " sem time associado"));
             } catch (\Exception $e) {
                 \Log::error('Erro ao criar laboratório: ' . $e->getMessage());

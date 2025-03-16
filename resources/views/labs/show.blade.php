@@ -50,6 +50,67 @@
                         </div>
                     </div>
 
+                    <!-- Seção de Equipamentos -->
+                    @if (!empty($labData['equipments']))
+                        <div class="mt-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Equipamentos do Laboratório</h3>
+                            <div class="relative">
+                                <div class="swiper-container equipment-carousel">
+                                    <div class="swiper-wrapper">
+                                        @foreach ($labData['equipments'] as $equipment)
+                                            <div class="swiper-slide">
+                                                <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 h-full flex flex-col">
+                                                    @if ($equipment['photo_path'])
+                                                        <div class="mb-3">
+                                                            <img
+                                                                src="{{ $equipment['photo_path'] }}"
+                                                                alt="{{ $equipment['model'] }}"
+                                                                class="w-full h-32 object-cover rounded cursor-pointer"
+                                                                onclick="openModal('{{ $equipment['photo_path'] }}', '{{ $equipment['model'] }}')"
+                                                            >
+                                                        </div>
+                                                    @endif
+                                                    <h4 class="text-sm font-semibold truncate">{{ $equipment['model'] }}</h4>
+                                                    <p class="text-xs text-gray-600 truncate">Marca: {{ $equipment['brand'] }}</p>
+                                                    <p class="text-xs text-gray-600 truncate">Responsável: {{ $equipment['technical_responsible'] }}</p>
+                                                    <div class="mt-1">
+                                                        <p class="text-xs font-medium">Disponível para:</p>
+                                                        <ul class="text-xs text-gray-600">
+                                                            @if ($equipment['available_for_services'])
+                                                                <li>- Prestação de serviços</li>
+                                                            @endif
+                                                            @if ($equipment['available_for_collaboration'])
+                                                                <li>- Colaboração em projeto/convênio</li>
+                                                            @endif
+                                                            @if (!$equipment['available_for_services'] && !$equipment['available_for_collaboration'])
+                                                                <li>- Não disponível</li>
+                                                            @endif
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <!-- Navegação personalizada -->
+                                <div class="absolute top-1/2 -translate-y-1/2 left-0 z-10">
+                                    <button class="equipment-swiper-button-prev text-gray-500 hover:text-gray-700">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="absolute top-1/2 -translate-y-1/2 right-0 z-10">
+                                    <button class="equipment-swiper-button-next text-gray-500 hover:text-gray-700">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <!-- Seção de Posts -->
                     <div class="mt-6">
                         <h3 class="text-lg font-medium text-gray-900 mb-4">Postagens do Laboratório</h3>
@@ -66,7 +127,7 @@
                             @endforeach
                         </div>
 
-                        <!-- Filtro para publicações do laboratório (novo design corrigido) -->
+                        <!-- Filtro para publicações do laboratório -->
                         <div class="mb-4">
                             <label class="flex items-center space-x-3 cursor-pointer">
                                 <input type="checkbox"
@@ -99,12 +160,42 @@
         </div>
     </div>
 
+    <!-- Modal para exibir a foto -->
+    <div id="photo-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center z-50" onclick="closeModalOnOutsideClick(event)">
+        <div class="relative max-w-4xl w-full" onclick="event.stopPropagation()">
+            <button class="absolute top-4 right-4 text-white text-2xl" onclick="closeModal()">×</button>
+            <img id="modal-image" src="" alt="" class="w-full h-auto rounded">
+            <p id="modal-caption" class="text-white text-center mt-2"></p>
+        </div>
+    </div>
+
     <script>
         // Configurações para filtro de tags
         window.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         window.tagColors = @json($tagColors);
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Inicializar o Swiper
+            const swiper = new Swiper('.equipment-carousel', {
+                slidesPerView: 1,
+                spaceBetween: 10,
+                navigation: {
+                    nextEl: '.equipment-swiper-button-next',
+                    prevEl: '.equipment-swiper-button-prev',
+                },
+                breakpoints: {
+                    640: {
+                        slidesPerView: 2,
+                        spaceBetween: 15,
+                    },
+                    1024: {
+                        slidesPerView: 3,
+                        spaceBetween: 20,
+                    },
+                },
+            });
+
+            // Configurar filtros de tags
             document.querySelectorAll('.tag-button').forEach(button => {
                 const tag = button.getAttribute('data-tag');
                 button.addEventListener('click', function() {
@@ -112,7 +203,6 @@
                 });
             });
 
-            // Inicializar o toggle do filtro de laboratório
             const labFilterToggle = document.getElementById('lab-filter-toggle');
             const labFilterInput = document.getElementById('lab-filter');
             const isLabFilterActive = labFilterInput.value === 'true';
@@ -198,5 +288,76 @@
                 textSpan.classList.remove('text-indigo-600');
             }
         }
+
+        // Funções do Modal
+        function openModal(imageSrc, caption) {
+            const modal = document.getElementById('photo-modal');
+            const modalImage = document.getElementById('modal-image');
+            const modalCaption = document.getElementById('modal-caption');
+            modalImage.src = imageSrc;
+            modalCaption.textContent = caption;
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('photo-modal');
+            modal.classList.add('hidden');
+        }
+
+        function closeModalOnOutsideClick(event) {
+            const modal = document.getElementById('photo-modal');
+            const modalContent = modal.querySelector('.relative');
+            if (!modalContent.contains(event.target)) {
+                closeModal();
+            }
+        }
     </script>
+
+    <style>
+        /* Ajustes para o carrossel de equipamentos */
+        .equipment-carousel {
+            padding: 0;
+        }
+
+        .equipment-carousel .swiper-slide {
+            width: 250px; /* Tamanho fixo para os cards */
+            height: auto;
+        }
+
+        .equipment-carousel img {
+            max-height: 128px; /* Ajuste a altura da imagem para ser mais compacta */
+            object-fit: cover;
+        }
+
+        /* Estilizar as setas de navegação */
+        .equipment-swiper-button-prev,
+        .equipment-swiper-button-next {
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .equipment-swiper-button-prev svg,
+        .equipment-swiper-button-next svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Esconder a paginação padrão do Swiper */
+        .equipment-carousel .swiper-pagination {
+            display: none;
+        }
+
+        /* Ajustar o texto para evitar overflow */
+        .equipment-carousel .truncate {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
 </x-app-layout>

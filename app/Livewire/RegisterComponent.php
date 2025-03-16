@@ -29,7 +29,7 @@ class RegisterComponent extends Component
     public $new_institution = '';
     public $new_laboratory = '';
     public $showNewInstitution = false;
-    public $showNewLaboratory = false;
+    public $showNewLaboratory = false; // Manteremos essa variável, mas a lógica será ajustada
     public $lab_coordinator = false;
     public $gender = '';
 
@@ -38,7 +38,6 @@ class RegisterComponent extends Component
     public $selectedCategory = null;
     public $selectedSubcategories = [];
     public $subcategories = [];
-
 
     protected $listeners = [
         'optionSelected',
@@ -160,6 +159,20 @@ class RegisterComponent extends Component
         $this->dispatch('dependencyChanged');
     }
 
+    public function updatedShowNewInstitution($value)
+    {
+        if ($value) {
+            $this->institution_id = null; // Limpar a instituição existente
+            $this->laboratory_id = null;  // Limpar o laboratório existente
+            $this->showNewLaboratory = true; // Exibir diretamente o campo de novo laboratório
+        } else {
+            $this->new_institution = ''; // Limpar o campo de nova instituição
+            $this->new_laboratory = '';  // Limpar o campo de novo laboratório
+            $this->showNewLaboratory = false; // Ocultar o campo de novo laboratório
+        }
+        $this->dispatch('dependencyChanged', 'institution_id', $this->institution_id);
+    }
+
     public function optionSelected($data)
     {
         \Log::info("Evento optionSelected recebido no RegisterComponent: " . json_encode($data));
@@ -218,13 +231,9 @@ class RegisterComponent extends Component
 
             if ($this->showNewInstitution) {
                 $rules['new_institution'] = 'required|string|max:255';
+                $rules['new_laboratory'] = 'required|string|max:255'; // Tornar obrigatório quando nova instituição
             } else {
                 $rules['institution_id'] = 'required|exists:institutions,id';
-            }
-
-            if ($this->showNewLaboratory) {
-                $rules['new_laboratory'] = 'required|string|max:255';
-            } elseif (!$this->showNewInstitution) {
                 $rules['laboratory_id'] = 'required|exists:laboratories,id';
             }
 
@@ -264,25 +273,9 @@ class RegisterComponent extends Component
 
             Log::info('Usuário criado com sucesso:', ['user_id' => $user->id, 'user_data' => $user->toArray()]);
 
-            $laboratoryName = null;
-            $laboratory = null;
-
-            if ($this->showNewLaboratory && $this->new_laboratory) {
-                $laboratory = Laboratory::create([
-                    'name' => $this->new_laboratory,
-                    'institution_id' => $this->showNewInstitution ? null : $this->institution_id,
-                    'state_id' => $this->state_id,
-                ]);
-                $laboratoryName = $this->new_laboratory;
-                Log::info('Novo laboratório criado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
-            } elseif ($this->laboratory_id) {
-                $laboratory = Laboratory::find($this->laboratory_id);
-                if (!$laboratory) {
-                    throw new \Exception('Laboratório selecionado não encontrado.');
-                }
-                $laboratoryName = $laboratory->name;
-                Log::info('Laboratório existente selecionado:', ['laboratory_id' => $laboratory->id, 'name' => $laboratoryName]);
-            }
+            // Obter o laboratório associado ao perfil do usuário
+            $laboratory = Laboratory::find($user->profile->laboratory_id);
+            $laboratoryName = $laboratory ? $laboratory->name : null;
 
             if ($laboratoryName) {
                 $createTeam = new CreateTeam();

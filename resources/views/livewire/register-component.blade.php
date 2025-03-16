@@ -21,7 +21,7 @@
                 @error('email') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
             </div>
 
-            <!-- Campo de Gênero (Novo) -->
+            <!-- Campo de Gênero -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Gênero</label>
                 <select wire:model="gender" class="w-full px-4 py-2 border rounded-md">
@@ -158,18 +158,18 @@
                     @error('laboratory_id') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
 
-                <div class="mb-4">
+                <!-- New Laboratory Field (shown when new institution or manually triggered) -->
+                <div class="{{ !$showNewInstitution && !$showNewLaboratory ? 'hidden' : 'mb-4' }}">
+                    <label class="block text-sm font-medium text-gray-700">Novo Laboratório</label>
+                    <input type="text" wire:model="new_laboratory" class="w-full px-4 py-2 border rounded-md">
+                    @error('new_laboratory') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <div class="{{ !$showNewInstitution ? 'mb-4' : 'hidden' }}">
                     <label class="inline-flex items-center">
                         <input type="checkbox" wire:model.live="showNewLaboratory" class="form-checkbox">
                         <span class="ml-2 text-sm">Meu laboratório não está na lista</span>
                     </label>
-                </div>
-
-                <!-- New Laboratory Field (conditionally shown) -->
-                <div class="{{ !$showNewLaboratory ? 'hidden' : 'mb-4' }}">
-                    <label class="block text-sm font-medium text-gray-700">Novo Laboratório</label>
-                    <input type="text" wire:model="new_laboratory" class="w-full px-4 py-2 border rounded-md">
-                    @error('new_laboratory') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
 
                 <div>

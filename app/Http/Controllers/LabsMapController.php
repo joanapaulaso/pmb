@@ -6,6 +6,7 @@ use App\Models\Team;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class LabsMapController extends Controller
 {
@@ -115,8 +116,7 @@ class LabsMapController extends Controller
     {
         Log::info('Exibindo perfil público do laboratório', ['team_id' => $team->id]);
 
-        $lab = $team->load('users');
-        // Log::info('Usuários associados ao laboratório', ['user_ids' => $lab->users->pluck('id')->toArray]);
+        $lab = $team->load(['users', 'equipments']); // Carrega os equipamentos junto com os usuários
 
         $tagColors = config('tags.colors', []);
         $tags = array_keys($tagColors);
@@ -126,7 +126,6 @@ class LabsMapController extends Controller
             ->with(['user', 'replies.user'])
             ->latest();
 
-        // Aplicar filtro de tags
         $selectedTags = $request->input('tags', []);
         if (!is_array($selectedTags)) {
             $selectedTags = array_filter(explode(',', $selectedTags));
@@ -140,7 +139,6 @@ class LabsMapController extends Controller
             });
         }
 
-        // Aplicar filtro de publicações do laboratório
         $labFilter = $request->input('lab_filter', 'false') === 'true';
         if ($labFilter) {
             $query->where('is_lab_publication', true);
@@ -148,8 +146,6 @@ class LabsMapController extends Controller
 
         $posts = $query->paginate(20);
         $posts->appends(['tags' => implode(',', $selectedTags), 'lab_filter' => $labFilter ? 'true' : 'false']);
-
-        Log::info('Posts antes da view', ['posts' => $posts->toArray()]);
 
         $labData = [
             'id' => $lab->id,
@@ -171,8 +167,20 @@ class LabsMapController extends Controller
                 'website' => $lab->website,
                 'working_hours' => $lab->working_hours,
                 'has_accessibility' => $lab->has_accessibility
-            ]
+            ],
+            'equipments' => $lab->equipments->map(function ($equipment) {
+                return [
+                    'id' => $equipment->id,
+                    'model' => $equipment->model,
+                    'brand' => $equipment->brand,
+                    'technical_responsible' => $equipment->technical_responsible,
+                    'available_for_services' => $equipment->available_for_services,
+                    'available_for_collaboration' => $equipment->available_for_collaboration,
+                    'photo_path' => $equipment->photo_path ? Storage::url($equipment->photo_path) : null,
+                ];
+            })->toArray()
         ];
+
         Log::info('Dados do laboratório carregados', ['lab' => $labData]);
         Log::info('Posts encontrados', ['count' => $posts->total()]);
 

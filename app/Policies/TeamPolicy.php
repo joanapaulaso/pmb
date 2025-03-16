@@ -88,4 +88,14 @@ class TeamPolicy
         return !is_null($user);
     }
 
+    public function viewEquipment(?User $user, Team $team)
+    {
+        return !is_null($user); // Apenas usuários autenticados podem visualizar
+    }
+
+    public function updateEquipment(User $user, Team $team)
+    {
+        return $user->ownsTeam($team); // Apenas o dono (coordenador) pode atualizar
+    }
+
 }

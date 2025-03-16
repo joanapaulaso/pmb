@@ -89,6 +89,11 @@ class Team extends JetstreamTeam
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function equipments()
+    {
+        return $this->hasMany(Equipment::class);
+    }
+
     /**
      * Get the full formatted address with complement.
      *

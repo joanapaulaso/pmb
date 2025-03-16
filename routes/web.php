@@ -6,7 +6,6 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostPortalController;
 use App\Http\Controllers\PublicProfileController;
-use App\Http\Controllers\DropdownController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\LabsMapController;
 use App\Http\Controllers\DashboardController;
@@ -105,15 +104,6 @@ Route::middleware($authMiddleware)->group(function () {
     Route::post('/upload-image', [App\Http\Controllers\ImageUploadController::class, 'upload'])
         ->middleware(['auth'])
         ->name('upload.image');
-});
-
-// Rotas para dropdowns que precisam apenas do middleware 'web'
-Route::middleware('web')->controller(DropdownController::class)->prefix('dropdown')->name('dropdown.')->group(function () {
-    Route::get('/countries', 'getCountries')->name('countries');
-    Route::get('/states', 'getStates')->name('states');
-    Route::get('/municipalities/{state_id}', 'getMunicipalities')->name('municipalities');
-    Route::get('/institutions/{state_id}', 'getInstitutions')->name('institutions');
-    Route::get('/laboratories/{institution_id?}', 'getLaboratories')->name('laboratories');
 });
 
 // Rotas para o painel administrativo

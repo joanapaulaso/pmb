@@ -25,6 +25,9 @@
         <!-- Extended Component Library -->
         <script type="module" src="https://unpkg.com/@googlemaps/extended-component-library@0.6/dist/index.min.js"></script>
 
+        <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+        <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+
         <!-- Styles -->
         @livewireStyles
 
