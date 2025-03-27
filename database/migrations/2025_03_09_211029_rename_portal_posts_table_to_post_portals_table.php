@@ -6,14 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 class RenamePortalPostsTableToPostPortalsTable extends Migration
 {
-
     public function up()
-        {
-            Schema::rename('post_portals', 'portal_posts');
-        }
+    {
+        // No action needed; table is already 'portal_posts'
+    }
 
     public function down()
     {
-        Schema::rename('portal_posts', 'post_portals');
+        // No action needed
     }
 }
