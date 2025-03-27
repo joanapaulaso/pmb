@@ -112,12 +112,18 @@ class PostController extends Controller
             'tag' => 'required|in:geral,pergunta,oportunidade,divulgação,ideia,colaboração,notícia,publicação',
             'additional_tags' => 'sometimes|array|max:2',
             'additional_tags.*' => 'in:geral,pergunta,oportunidade,divulgação,ideia,colaboração,notícia,publicação',
-            'is_lab_publication' => 'required|boolean' // Validação para a nova coluna
+            'is_lab_publication' => [
+                'boolean',
+                function ($attribute, $value, $fail) use ($request) {
+                    $tags = array_merge([$request->input('tag')], $request->input('additional_tags', []));
+                    if (in_array('publicação', $tags) && is_null($value)) {
+                        $fail('O campo "é publicação do laboratório" é obrigatório quando a tag #publicação está selecionada.');
+                    }
+                },
+            ],
         ]);
 
-        // Sanitize HTML content
         $content = $this->sanitizeHtml($validated['content']);
-
         $metadata = [];
 
         try {
@@ -163,13 +169,12 @@ class PostController extends Controller
         }
 
         try {
-            // Create the post with additional tags and is_lab_publication
             $post = $request->user()->posts()->create([
                 'content' => $content,
                 'tag' => $validated['tag'],
                 'additional_tags' => $request->input('additional_tags', []),
                 'metadata' => $metadata,
-                'is_lab_publication' => $validated['is_lab_publication'] // Salvar a nova coluna
+                'is_lab_publication' => $request->input('is_lab_publication', false), // Default to false if not provided
             ]);
 
             return redirect()->route('dashboard');
@@ -178,7 +183,6 @@ class PostController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-
             return redirect()->route('dashboard')
                 ->with('error', 'Ocorreu um erro ao salvar seu post. Por favor, tente novamente.');
         }
