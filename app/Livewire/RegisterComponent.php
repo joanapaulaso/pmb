@@ -231,10 +231,14 @@ class RegisterComponent extends Component
 
             if ($this->showNewInstitution) {
                 $rules['new_institution'] = 'required|string|max:255';
-                $rules['new_laboratory'] = 'required|string|max:255'; // Tornar obrigatório quando nova instituição
+                $rules['new_laboratory'] = 'required|string|max:255';
             } else {
                 $rules['institution_id'] = 'required|exists:institutions,id';
-                $rules['laboratory_id'] = 'required|exists:laboratories,id';
+                if ($this->showNewLaboratory) {
+                    $rules['new_laboratory'] = 'required|string|max:255';
+                } else {
+                    $rules['laboratory_id'] = 'required|exists:laboratories,id';
+                }
             }
 
             $this->validate($rules);
