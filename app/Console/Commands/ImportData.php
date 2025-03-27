@@ -81,9 +81,16 @@ class ImportData extends Command
             $parts = explode("\t", $line);
             if (count($parts) >= 3) {
                 $state = State::firstOrCreate(['name' => $parts[2]]);
+                // Fetch a municipality for this state (e.g., first available)
+                $municipality = Municipality::where('state_id', $state->id)->first();
+                if (!$municipality) {
+                    $this->warn("Nenhum município encontrado para o estado {$state->name}. Pulando instituição {$parts[0]}.");
+                    continue;
+                }
                 Institution::firstOrCreate([
                     'name' => $parts[0],
                     'state_id' => $state->id,
+                    'municipality_id' => $municipality->id,
                     'country_code' => $brazil->code
                 ]);
             }
