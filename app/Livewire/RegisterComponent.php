@@ -29,11 +29,10 @@ class RegisterComponent extends Component
     public $new_institution = '';
     public $new_laboratory = '';
     public $showNewInstitution = false;
-    public $showNewLaboratory = false; // Manteremos essa variável, mas a lógica será ajustada
+    public $showNewLaboratory = false;
     public $lab_coordinator = false;
     public $gender = '';
 
-    // Adicionando variáveis para as categorias
     public $categories = [];
     public $selectedCategory = null;
     public $selectedSubcategories = [];
@@ -46,18 +45,67 @@ class RegisterComponent extends Component
         'setInstitutionAddress' => 'setInstitutionAddress',
     ];
 
+    protected function rules()
+    {
+        $rules = [
+            'full_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:8|confirmed',
+            'birth_date' => 'nullable|date',
+            'country_code' => 'required|string|max:2|exists:countries,code',
+            'gender' => 'required|string',
+            'institution_address' => 'nullable|string|max:255',
+        ];
+
+        if (!$this->isInternational) {
+            $rules['state_id'] = 'required|exists:states,id';
+            $rules['municipality_id'] = 'required|exists:municipalities,id';
+        }
+
+        if ($this->showNewInstitution) {
+            $rules['new_institution'] = 'required|string|max:255';
+            $rules['new_laboratory'] = 'required|string|max:255';
+        } else {
+            $rules['institution_id'] = 'required|exists:institutions,id';
+            if ($this->showNewLaboratory) {
+                $rules['new_laboratory'] = 'required|string|max:255';
+            } else {
+                $rules['laboratory_id'] = 'required|exists:laboratories,id';
+            }
+        }
+
+        return $rules;
+    }
+
+    protected $messages = [
+        'full_name.required' => 'O nome completo é obrigatório.',
+        'email.required' => 'O email é obrigatório.',
+        'email.email' => 'Digite um email válido.',
+        'email.unique' => 'Este email já está em uso.',
+        'password.required' => 'A senha é obrigatória.',
+        'password.min' => 'A senha deve ter pelo menos 8 caracteres.',
+        'password.confirmed' => 'As senhas não coincidem.',
+        'birth_date.date' => 'Digite uma data válida.',
+        'country_code.required' => 'O país é obrigatório.',
+        'state_id.required' => 'O estado é obrigatório.',
+        'municipality_id.required' => 'O município é obrigatório.',
+        'institution_id.required' => 'A instituição é obrigatória.',
+        'new_institution.required' => 'O nome da nova instituição é obrigatório.',
+        'laboratory_id.required' => 'O laboratório é obrigatório.',
+        'new_laboratory.required' => 'O nome do novo laboratório é obrigatório.',
+        'gender.required' => 'O gênero é obrigatório.',
+    ];
+
     public function mount()
     {
         if (Auth::check()) {
             return redirect()->route('portal');
         }
 
-        // Set default country to Brazil if not international
         if (!$this->isInternational) {
             $this->country_code = 'BR';
         }
 
-        // Carregar categorias do arquivo JSON
         $this->loadCategories();
     }
 
@@ -72,7 +120,6 @@ class RegisterComponent extends Component
             $categoriesJson = file_get_contents(storage_path('app/data/categories.json'));
             $this->categories = json_decode($categoriesJson, true);
 
-            // Inicializar subcategorias se uma categoria estiver selecionada
             if ($this->selectedCategory && isset($this->categories[$this->selectedCategory])) {
                 $this->subcategories = $this->categories[$this->selectedCategory];
             }
@@ -93,19 +140,16 @@ class RegisterComponent extends Component
 
     public function addSubcategory($subcategory)
     {
-        // Limitar a 3 subcategorias
         if (count($this->selectedSubcategories) >= 3) {
             return;
         }
 
-        // Verificar se a categoria e subcategoria estão selecionadas
         if ($this->selectedCategory && $subcategory) {
             $categorySubcategory = [
                 'category' => $this->selectedCategory,
                 'subcategory' => $subcategory
             ];
 
-            // Verificar se a combinação já existe
             $exists = false;
             foreach ($this->selectedSubcategories as $item) {
                 if ($item['category'] === $this->selectedCategory && $item['subcategory'] === $subcategory) {
@@ -153,22 +197,21 @@ class RegisterComponent extends Component
 
     public function updatedInstitutionId($value)
     {
-        // Resetar campos dependentes
         $this->laboratory_id = null;
-        $this->institution_address = ''; // Resetar o endereço quando a instituição mudar
+        $this->institution_address = '';
         $this->dispatch('dependencyChanged');
     }
 
     public function updatedShowNewInstitution($value)
     {
         if ($value) {
-            $this->institution_id = null; // Limpar a instituição existente
-            $this->laboratory_id = null;  // Limpar o laboratório existente
-            $this->showNewLaboratory = true; // Exibir diretamente o campo de novo laboratório
+            $this->institution_id = null;
+            $this->laboratory_id = null;
+            $this->showNewLaboratory = true;
         } else {
-            $this->new_institution = ''; // Limpar o campo de nova instituição
-            $this->new_laboratory = '';  // Limpar o campo de novo laboratório
-            $this->showNewLaboratory = false; // Ocultar o campo de novo laboratório
+            $this->new_institution = '';
+            $this->new_laboratory = '';
+            $this->showNewLaboratory = false;
         }
         $this->dispatch('dependencyChanged', 'institution_id', $this->institution_id);
     }
@@ -203,8 +246,15 @@ class RegisterComponent extends Component
         \Log::info("Teste de ação do Livewire disparado!");
     }
 
+    public function updated($propertyName)
+    {
+        $this->validateOnly($propertyName);
+    }
+
     public function submit()
     {
+        $this->validate();
+
         try {
             \Log::info('Estado completo antes da validação:', $this->all());
             \Log::info('Valores específicos antes da validação:', [
@@ -214,35 +264,6 @@ class RegisterComponent extends Component
                 'isInternational' => $this->isInternational,
             ]);
 
-            $rules = [
-                'full_name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email',
-                'password' => 'required|min:8|confirmed',
-                'birth_date' => 'nullable|date',
-                'country_code' => 'required|string|max:2|exists:countries,code',
-                'gender' => 'required|string',
-                'institution_address' => 'nullable|string|max:255',
-            ];
-
-            if (!$this->isInternational) {
-                $rules['state_id'] = 'required|exists:states,id';
-                $rules['municipality_id'] = 'required|exists:municipalities,id';
-            }
-
-            if ($this->showNewInstitution) {
-                $rules['new_institution'] = 'required|string|max:255';
-                $rules['new_laboratory'] = 'required|string|max:255';
-            } else {
-                $rules['institution_id'] = 'required|exists:institutions,id';
-                if ($this->showNewLaboratory) {
-                    $rules['new_laboratory'] = 'required|string|max:255';
-                } else {
-                    $rules['laboratory_id'] = 'required|exists:laboratories,id';
-                }
-            }
-
-            $this->validate($rules);
-
             $data = [
                 'full_name' => $this->full_name,
                 'email' => $this->email,
@@ -250,8 +271,8 @@ class RegisterComponent extends Component
                 'password_confirmation' => $this->password_confirmation,
                 'birth_date' => $this->birth_date,
                 'country_code' => $this->country_code,
-                'state_id' => $this->state_id,
-                'municipality_id' => $this->municipality_id,
+                'state_id' => $this->isInternational ? null : $this->state_id,
+                'municipality_id' => $this->isInternational ? null : $this->municipality_id,
                 'institution_id' => $this->institution_id,
                 'new_institution' => $this->new_institution,
                 'laboratory_id' => $this->laboratory_id,
@@ -277,9 +298,9 @@ class RegisterComponent extends Component
 
             Log::info('Usuário criado com sucesso:', ['user_id' => $user->id, 'user_data' => $user->toArray()]);
 
-            // Obter o laboratório associado ao perfil do usuário
+            // Determinar o nome do laboratório (existente ou novo)
             $laboratory = Laboratory::find($user->profile->laboratory_id);
-            $laboratoryName = $laboratory ? $laboratory->name : null;
+            $laboratoryName = $laboratory ? $laboratory->name : ($this->new_laboratory ?: null);
 
             if ($laboratoryName) {
                 $createTeam = new CreateTeam();
@@ -305,20 +326,17 @@ class RegisterComponent extends Component
                     Log::info('Laboratório associado ao Team:', ['laboratory_id' => $laboratory->id, 'team_id' => $team->id]);
                 }
 
-                // Associar o usuário ao time na tabela team_user
                 $user->teams()->attach($team->id, ['created_at' => now(), 'updated_at' => now()]);
                 Log::info("Usuário {$user->id} associado ao time {$team->id} na tabela team_user");
 
-                // Se for coordenador, o usuário já é o dono; se não, adicionar como membro
                 if (!$this->lab_coordinator) {
-                    $role = 'editor'; // Papel padrão do Jetstream
+                    $role = 'editor';
                     $addTeamMember = new AddTeamMember();
                     try {
                         $addTeamMember->add($user, $team, $user->email, $role);
                         Log::info('Usuário vinculado ao Team com papel:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $role]);
                     } catch (\Exception $e) {
                         Log::error('Erro ao vincular usuário ao Team:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-                        // Continuar mesmo com erro, pois a associação manual já foi feita
                     }
                 } else {
                     Log::info('Usuário é o coordenador e já é o dono do time; nenhuma ação adicional necessária.', ['user_id' => $user->id, 'team_id' => $team->id]);

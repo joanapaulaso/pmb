@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/appCss-CjC9gQLf.css",
+    "file": "assets/app-CeuCyx38.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
@@ -28,6 +28,18 @@
   "resources/images/carousel_03.png": {
     "file": "assets/carousel_03-ln_rqzGp.png",
     "src": "resources/images/carousel_03.png"
+  },
+  "resources/images/default-event-image.jpg": {
+    "file": "assets/default-event-image-pTqYVuCv.jpg",
+    "src": "resources/images/default-event-image.jpg"
+  },
+  "resources/images/default-playlist-thumbnail.jpg": {
+    "file": "assets/default-event-image-pTqYVuCv.jpg",
+    "src": "resources/images/default-event-image.jpg"
+  },
+  "resources/images/default-video-thumbnail.jpg": {
+    "file": "assets/default-event-image-pTqYVuCv.jpg",
+    "src": "resources/images/default-event-image.jpg"
   },
   "resources/images/hero_bg.png": {
     "file": "assets/hero_bg-pqIAu-jY.png",
@@ -86,7 +98,7 @@
     "src": "resources/images/mass_spec_detail_00.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-BpwDnPKF.js",
+    "file": "assets/app-YuLB1M_l.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -99,6 +111,7 @@
       "assets/carousel_01-4d88hqdR.png",
       "assets/carousel_02-o6T-538p.png",
       "assets/carousel_03-ln_rqzGp.png",
+      "assets/default-event-image-pTqYVuCv.jpg",
       "assets/hero_bg-pqIAu-jY.png",
       "assets/hero_bg_00-BcwJUlD1.png",
       "assets/hero_bg_00_animation-69OQaM6a.mp4",

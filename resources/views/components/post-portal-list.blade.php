@@ -29,7 +29,7 @@
 
     <div id="posts-container">
         @foreach($posts as $post)
-            <div class="mb-8 p-4 border rounded" id="post-{{ $post->id }}">
+            <div class="mb-8 p-4 border border-gray-100 rounded" id="post-{{ $post->id }}">
                 <p class="font-bold">
                     <a href="{{ route('public.profile', $post->user) }}" class="text-blue-500 hover:underline">
                         {{ $post->user->name }}
@@ -278,7 +278,7 @@ function updatePosts(posts) {
 
     posts.forEach(post => {
         const postElement = document.createElement('div');
-        postElement.className = 'mb-8 p-4 border rounded';
+        postElement.className = 'mb-8 p-4 border border-gray-100 rounded';
         postElement.id = `post-${post.id}`;
 
         let tagsHtml = '';

@@ -14,7 +14,7 @@
 <div>
     <div id="posts-container">
         @foreach($posts as $post)
-            <div class="mb-8 p-4 border rounded" id="post-{{ $post->id }}">
+            <div class="mb-8 p-4 border border-gray-100 rounded" id="post-{{ $post->id }}">
                 <p class="font-bold">
                     <a href="{{ route('public.profile', $post->user) }}" class="text-blue-500 hover:underline">
                         {{ $post->user->name }}

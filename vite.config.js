@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite';
+import tailwindcss from '@tailwindcss/vite'
 import laravel from 'laravel-vite-plugin';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
-    // Definindo base para produção
-    base: process.env.NODE_ENV === 'production' ? './' : '/',
     plugins: [
+        tailwindcss(),
         viteStaticCopy({
             targets: [
                 { src: 'resources/images/logo.png', dest: 'images' },
@@ -17,26 +17,26 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/css/quill.snow.css',
                 'resources/js/app.js',
-                // 'resources/js/post-scripts.js',
             ],
-            refresh: true,
+            refresh: [
+                'resources/views/**', // Watch Blade templates
+                'resources/views/components/**', // Watch Blade templates
+                'resources/css/**',  // Watch CSS files
+                'resources/js/**',   // Watch JS files
+                'tailwind.config.js', // Watch Tailwind config
+                'postcss.config.js',  // Watch PostCSS config
+            ],
         }),
     ],
     resolve: {
         alias: {
-            '@quill': '/node_modules/quill'
+            '@quill': '/node_modules/quill',
         },
     },
     build: {
         outDir: 'public/build',
         assetsDir: 'assets',
-        rollupOptions: {
-            input: {
-                app: 'resources/js/app.js',
-                appCss: 'resources/css/app.css',
-                quill: 'resources/css/quill.snow.css',
-            },
-        },
+        // Removed rollupOptions.input to avoid conflicts with laravel-vite-plugin
     },
     assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg', '**/*.mp4'],
 });

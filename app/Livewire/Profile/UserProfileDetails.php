@@ -17,6 +17,8 @@ class UserProfileDetails extends Component
     public $user;
     public $profile;
 
+    protected $listeners = ['saved' => 'refreshProfile'];
+
     public function mount()
     {
         $this->user = Auth::user();

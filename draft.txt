@@ -13,9 +13,20 @@ sail php artisan clear-compiled
 /opt/cloudlinux/alt-php83/root/usr/bin/php artisan optimize:clear
 
 /opt/cloudlinux/alt-php83/root/usr/bin/php artisan migrate
+/opt/cloudlinux/alt-php83/root/usr/bin/php artisan import:data
 
 sail php artisan route:list | grep register
 sail php artisan import:data
+
+
+
+GET http://localhost:8080/images/default-video-thumbnail.jpg 404 (Not Found)
+videos:239 
+            
+GET http://localhost:8080/images/default-playlist-thumbnail.jpg 404 (Not Found)
+
+GET http://localhost:8080/images/default-event-image.jpg 404 (Not Found)
+
 
 $dados = [
     'name' => 'Joana Paula',

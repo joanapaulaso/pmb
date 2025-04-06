@@ -1,5 +1,7 @@
 import './bootstrap';
 import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm';
+import '../images/default-event-image.jpg'; 
+
 
 // Importar o CSS do Quill diretamente no JavaScript
 import 'quill/dist/quill.snow.css';

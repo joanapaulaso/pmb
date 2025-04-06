@@ -54,11 +54,12 @@ class CreateNewUser implements CreatesNewUsers
             }
         }
 
+        // Criar ou obter laboratório
         if (!empty($input['new_laboratory'])) {
             $input['laboratory_id'] = $this->getOrCreateLaboratory(
                 $input['new_laboratory'],
                 $input['institution_id'] ?? null,
-                $input['state_id'] ?? null,
+                $input['isInternational'] ? null : ($input['state_id'] ?? null),
                 $input['team_id'] ?? null
             );
         }
@@ -75,14 +76,13 @@ class CreateNewUser implements CreatesNewUsers
             'birth_date' => $input['birth_date'] ?? null,
             'institution_id' => $input['institution_id'] ?? null,
             'country_code' => $input['country_code'] ?? null,
-            'state_id' => $input['state_id'] ?? null,
-            'municipality_id' => $input['municipality_id'] ?? null,
+            'state_id' => $input['isInternational'] ? null : ($input['state_id'] ?? null),
+            'municipality_id' => $input['isInternational'] ? null : ($input['municipality_id'] ?? null),
             'lab_coordinator' => isset($input['lab_coordinator']) ? 1 : 0,
             'laboratory_id' => $input['laboratory_id'] ?? null,
             'gender' => $input['gender'] ?? null,
         ]);
 
-        // Associar o usuário ao time, se team_id for fornecido
         if (!empty($input['team_id'])) {
             $team = \App\Models\Team::find($input['team_id']);
             if ($team) {
@@ -105,96 +105,79 @@ class CreateNewUser implements CreatesNewUsers
      */
     private function saveUserCategories($user, $selectedSubcategories)
     {
-        // Se as tabelas ainda não existirem, ignoramos esta etapa
-        if (!Schema::hasTable('categories') || !Schema::hasTable('user_categories')) {
+        if (!Schema::hasTable('user_categories') || !Schema::hasTable('categories')) {
+            \Log::warning("Tabela 'user_categories' ou 'categories' não existe. Não foi possível salvar categorias.");
             return;
         }
+
+        \Log::info("Salvando categorias para o usuário {$user->id}: " . json_encode($selectedSubcategories));
 
         foreach ($selectedSubcategories as $selection) {
             if (isset($selection['category']) && isset($selection['subcategory'])) {
                 $categoryName = $selection['category'];
                 $subcategoryName = $selection['subcategory'];
 
-                // Procurar a categoria principal - não impede registro se não encontrar
-                $category = \App\Models\Category::where('name', $categoryName)
-                    ->where('type', 'category')
-                    ->first();
+                // Busca ou cria a categoria pai
+                $category = \App\Models\Category::firstOrCreate(
+                    ['name' => $categoryName, 'type' => 'category'],
+                    ['name' => $categoryName, 'type' => 'category']
+                );
 
-                if ($category) {
-                    // Procurar a subcategoria relacionada
-                    $subcategory = \App\Models\Category::where('name', $subcategoryName)
-                        ->where('type', 'subcategory')
-                        ->where('parent_id', $category->id)
-                        ->first();
+                // Busca ou cria a subcategoria
+                $subcategory = \App\Models\Category::firstOrCreate(
+                    ['name' => $subcategoryName, 'type' => 'subcategory', 'parent_id' => $category->id],
+                    ['name' => $subcategoryName, 'type' => 'subcategory', 'parent_id' => $category->id]
+                );
 
-                    if ($subcategory) {
-                        \App\Models\UserCategory::create([
-                            'user_id' => $user->id,
-                            'category_id' => $subcategory->id,
-                            'category_name' => $categoryName,
-                            'subcategory_name' => $subcategoryName
-                        ]);
-                    } else {
-                        // Se a subcategoria não existir no banco, ainda podemos armazenar os nomes
-                        \App\Models\UserCategory::create([
-                            'user_id' => $user->id,
-                            'category_id' => $category->id,  // Usamos o ID da categoria principal
-                            'category_name' => $categoryName,
-                            'subcategory_name' => $subcategoryName
-                        ]);
-                    }
-                }
+                // Salva o registro em user_categories com o category_id da subcategoria
+                \App\Models\UserCategory::create([
+                    'user_id' => $user->id,
+                    'category_id' => $subcategory->id,
+                    'category_name' => $categoryName,
+                    'subcategory_name' => $subcategoryName,
+                ]);
+                \Log::info("Categoria salva: user_id={$user->id}, category_id={$subcategory->id}, category_name={$categoryName}, subcategory_name={$subcategoryName}");
+            } else {
+                \Log::warning("Seleção de categoria inválida para o usuário {$user->id}: " . json_encode($selection));
             }
         }
     }
 
     /**
      * Obtém ou cria um laboratório com base no nome, instituição, estado e time
-     *
-     * @param string $labName Nome do laboratório
-     * @param int|null $institutionId ID da instituição
-     * @param int|null $stateId ID do estado
-     * @param int|null $teamId ID do time (adicionado)
-     * @return int|null ID do laboratório ou null em caso de erro
      */
     private function getOrCreateLaboratory($labName, $institutionId, $stateId, $teamId = null)
     {
         if (!$labName || !$institutionId) {
             \Log::warning("Dados insuficientes para criar laboratório: labName={$labName}, institutionId={$institutionId}");
-            return null; // Se faltar algum dado essencial, retorna null
+            return null;
         }
 
-        // Verifica se a instituição existe
         $institution = Institution::find($institutionId);
         if (!$institution) {
             \Log::warning("Instituição ID {$institutionId} não encontrada");
             return null;
         }
 
-        // Para usuários do Brasil, validar o estado
-        if ($institution->country_code === 'BR' && !$stateId) {
-            \Log::warning("Estado é obrigatório para laboratórios de instituições brasileiras");
-            return null;
-        }
-
-        // Constrói a consulta base
         $query = Laboratory::where('name', $labName)
             ->where('institution_id', $institution->id);
 
-        if ($institution->country_code === 'BR') {
+        // Para usuários internacionais, state_id será null
+        if ($institution->country_code === 'BR' && !$stateId) {
+            \Log::warning("Estado é obrigatório para laboratórios de instituições brasileiras");
+            return null;
+        } elseif ($institution->country_code === 'BR') {
             $query->where('state_id', $stateId);
         } else {
             $query->whereNull('state_id');
         }
 
-        // Se team_id for fornecido, adiciona à consulta
         if ($teamId) {
             $query->where('team_id', $teamId);
         } else {
             $query->whereNull('team_id');
         }
 
-        // Verifica se o laboratório já existe com os critérios fornecidos
         $laboratory = $query->first();
 
         if (!$laboratory) {

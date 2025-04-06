@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Laravel\Fortify\Fortify;
 use Livewire\Livewire;
 use App\Livewire\SearchableDropdown;
+use App\Livewire\Profile\ProfileSearchSelect;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -45,7 +46,8 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->session()->get('login.id'));
         });
 
-        // Registrar o componente Livewire manualmente
-        Livewire::component('searchable-dropdown', SearchableDropdown::class);
+                Livewire::component('searchable-dropdown', SearchableDropdown::class);
+
+        Livewire::component('profile.profile-search-select', ProfileSearchSelect::class);
     }
 }

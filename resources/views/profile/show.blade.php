@@ -13,7 +13,7 @@
             <x-section-border />
 
             @if (Laravel\Fortify\Features::canUpdateProfileInformation())
-                @livewire('profile.update-profile-information-form')
+                @livewire('profile.profile-update')
 
                 <x-section-border />
             @endif

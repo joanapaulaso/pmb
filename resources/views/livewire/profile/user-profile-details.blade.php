@@ -1,6 +1,6 @@
 <x-action-section>
     <x-slot name="title">
-        {{ __('Informações Detalhadas') }}
+        {{ __('Informações do Perfil') }}
     </x-slot>
 
     <x-slot name="description">

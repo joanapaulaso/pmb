@@ -8,61 +8,89 @@
         @csrf
         @method('PUT')
 
-        <div class="bg-white shadow-md rounded-lg overflow-hidden mb-6">
-            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <h2 class="text-lg font-medium text-gray-900">Informações do Evento</h2>
+        <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+            <div class="bg-stone-50 px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Informações do Evento</h2>
             </div>
 
             <div class="p-6 space-y-6">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
                         <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Título do Evento <span class="text-red-500">*</span></label>
-                        <input type="text" name="title" id="title" value="{{ old('title', $event->title) }}" class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md" required>
+                        <input 
+                            type="text" 
+                            name="title" 
+                            id="title" 
+                            value="{{ old('title', $event->title) }}" 
+                            class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors" 
+                            required
+                        >
                         @error('title')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div>
                         <label for="event_type" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Evento <span class="text-red-500">*</span></label>
-                        <select name="event_type" id="event_type" class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md" required>
+                        <select 
+                            name="event_type" 
+                            id="event_type" 
+                            class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors" 
+                            required
+                        >
                             <option value="seminar" {{ old('event_type', $event->event_type) == 'seminar' ? 'selected' : '' }}>Seminário</option>
                             <option value="workshop" {{ old('event_type', $event->event_type) == 'workshop' ? 'selected' : '' }}>Workshop</option>
                             <option value="conference" {{ old('event_type', $event->event_type) == 'conference' ? 'selected' : '' }}>Conferência</option>
                             <option value="webinar" {{ old('event_type', $event->event_type) == 'webinar' ? 'selected' : '' }}>Webinário</option>
                         </select>
                         @error('event_type')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
 
                 <div>
                     <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Descrição <span class="text-red-500">*</span></label>
-                    <textarea name="description" id="description" rows="4" class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md" required>{{ old('description', $event->description) }}</textarea>
+                    <textarea 
+                        name="description" 
+                        id="description" 
+                        rows="4" 
+                        class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors" 
+                        required
+                    >{{ old('description', $event->description) }}</textarea>
                     @error('description')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
                         <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Data de Início <span class="text-red-500">*</span></label>
-                        <input type="datetime-local" name="start_date" id="start_date"
-                            value="{{ old('start_date', $event->start_date ? date('Y-m-d\TH:i', strtotime($event->start_date)) : '') }}"
-                            class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md" required>
+                        <input 
+                            type="datetime-local" 
+                            name="start_date" 
+                            id="start_date" 
+                            value="{{ old('start_date', $event->start_date ? date('Y-m-d\TH:i', strtotime($event->start_date)) : '') }}" 
+                            class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors" 
+                            required
+                        >
                         @error('start_date')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div>
                         <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">Data de Término <span class="text-red-500">*</span></label>
-                        <input type="datetime-local" name="end_date" id="end_date"
-                            value="{{ old('end_date', $event->end_date ? date('Y-m-d\TH:i', strtotime($event->end_date)) : '') }}"
-                            class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md" required>
+                        <input 
+                            type="datetime-local" 
+                            name="end_date" 
+                            id="end_date" 
+                            value="{{ old('end_date', $event->end_date ? date('Y-m-d\TH:i', strtotime($event->end_date)) : '') }}" 
+                            class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors" 
+                            required
+                        >
                         @error('end_date')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
@@ -70,26 +98,46 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
                         <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Local (opcional)</label>
-                        <input type="text" name="location" id="location" value="{{ old('location', $event->location) }}" class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        <input 
+                            type="text" 
+                            name="location" 
+                            id="location" 
+                            value="{{ old('location', $event->location) }}" 
+                            class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors"
+                        >
                         @error('location')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div>
                         <label for="online_url" class="block text-sm font-medium text-gray-700 mb-1">URL Online (opcional)</label>
-                        <input type="url" name="online_url" id="online_url" value="{{ old('online_url', $event->online_url) }}" placeholder="https://meet.google.com/..." class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                        <input 
+                            type="url" 
+                            name="online_url" 
+                            id="online_url" 
+                            value="{{ old('online_url', $event->online_url) }}" 
+                            placeholder="https://meet.google.com/..." 
+                            class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors"
+                        >
                         @error('online_url')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
 
                 <div>
                     <label for="registration_url" class="block text-sm font-medium text-gray-700 mb-1">URL para Inscrição (opcional)</label>
-                    <input type="url" name="registration_url" id="registration_url" value="{{ old('registration_url', $event->registration_url) }}" placeholder="https://forms.google.com/..." class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                    <input 
+                        type="url" 
+                        name="registration_url" 
+                        id="registration_url" 
+                        value="{{ old('registration_url', $event->registration_url) }}" 
+                        placeholder="https://forms.google.com/..." 
+                        class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors"
+                    >
                     @error('registration_url')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                     @enderror
                 </div>
 
@@ -101,32 +149,56 @@
                             <p class="mt-1 text-xs text-gray-500">Imagem atual</p>
                         </div>
                     @endif
-                    <input type="file" name="image" id="image" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" accept="image/*">
+                    <input 
+                        type="file" 
+                        name="image" 
+                        id="image" 
+                        class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-500 file:text-white hover:file:bg-blue-600 transition-colors" 
+                        accept="image/*"
+                    >
                     <p class="mt-1 text-xs text-gray-500">Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 2MB.</p>
                     <p class="mt-1 text-xs text-gray-500">Deixe em branco para manter a imagem atual.</p>
                     @error('image')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
                     @enderror
                 </div>
 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
-                        <input type="checkbox" name="is_published" id="is_published" value="1" {{ old('is_published', $event->is_published) ? 'checked' : '' }} class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                        <label for="is_published" class="ml-2 block text-sm text-gray-900">Publicado</label>
+                        <input 
+                            type="checkbox" 
+                            name="is_published" 
+                            id="is_published" 
+                            value="1" 
+                            {{ old('is_published', $event->is_published) ? 'checked' : '' }} 
+                            class="form-checkbox h-4 w-4 text-blue-500 border-1 border-gray-300 rounded"
+                        >
+                        <label for="is_published" class="ml-2 block text-sm text-gray-700">Publicado</label>
                     </div>
 
                     <div class="flex items-center">
-                        <input type="checkbox" name="is_featured" id="is_featured" value="1" {{ old('is_featured', $event->is_featured) ? 'checked' : '' }} class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                        <label for="is_featured" class="ml-2 block text-sm text-gray-900">Destacar evento</label>
+                        <input 
+                            type="checkbox" 
+                            name="is_featured" 
+                            id="is_featured" 
+                            value="1" 
+                            {{ old('is_featured', $event->is_featured) ? 'checked' : '' }} 
+                            class="form-checkbox h-4 w-4 text-blue-500 border-1 border-gray-300 rounded"
+                        >
+                        <label for="is_featured" class="ml-2 block text-sm text-gray-700">Destacar evento</label>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white shadow-md rounded-lg overflow-hidden mb-6">
-            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 class="text-lg font-medium text-gray-900">Palestrantes</h2>
-                <button type="button" id="add-speaker" class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-purple-700 bg-purple-100 hover:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+        <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+            <div class="bg-stone-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Palestrantes</h2>
+                <button 
+                    type="button" 
+                    id="add-speaker" 
+                    class="inline-flex items-center px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded shadow hover:bg-blue-200 transition-colors"
+                >
                     <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
@@ -141,8 +213,8 @@
 
                 @if($event->speakers->count() > 0)
                     @foreach($event->speakers as $index => $speaker)
-                        <div class="speaker-card bg-gray-50 rounded-lg p-4 relative">
-                            <button type="button" class="remove-speaker absolute top-2 right-2 text-gray-400 hover:text-red-500">
+                        <div class="speaker-card bg-stone-50 rounded-lg p-4 relative shadow-xs">
+                            <button type="button" class="remove-speaker absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors">
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
@@ -153,24 +225,44 @@
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Palestrante <span class="text-red-500">*</span></label>
-                                    <input type="text" name="speakers[{{ $index }}][name]" value="{{ old('speakers.'.$index.'.name', $speaker->name) }}" class="speaker-name shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md" required>
+                                    <input 
+                                        type="text" 
+                                        name="speakers[{{ $index }}][name]" 
+                                        value="{{ old('speakers.'.$index.'.name', $speaker->name) }}" 
+                                        class="speaker-name block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors" 
+                                        required
+                                    >
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Instituição</label>
-                                        <input type="text" name="speakers[{{ $index }}][institution]" value="{{ old('speakers.'.$index.'.institution', $speaker->institution) }}" class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                        <input 
+                                            type="text" 
+                                            name="speakers[{{ $index }}][institution]" 
+                                            value="{{ old('speakers.'.$index.'.institution', $speaker->institution) }}" 
+                                            class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors"
+                                        >
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">Cargo/Função</label>
-                                        <input type="text" name="speakers[{{ $index }}][role]" value="{{ old('speakers.'.$index.'.role', $speaker->role) }}" class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                        <input 
+                                            type="text" 
+                                            name="speakers[{{ $index }}][role]" 
+                                            value="{{ old('speakers.'.$index.'.role', $speaker->role) }}" 
+                                            class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors"
+                                        >
                                     </div>
                                 </div>
                             </div>
 
                             <div class="mt-4">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Mini Biografia</label>
-                                <textarea name="speakers[{{ $index }}][bio]" rows="2" class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ old('speakers.'.$index.'.bio', $speaker->bio) }}</textarea>
+                                <textarea 
+                                    name="speakers[{{ $index }}][bio]" 
+                                    rows="2" 
+                                    class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors"
+                                >{{ old('speakers.'.$index.'.bio', $speaker->bio) }}</textarea>
                             </div>
 
                             <div class="mt-4">
@@ -181,7 +273,12 @@
                                         <p class="mt-1 text-xs text-gray-500">Foto atual</p>
                                     </div>
                                 @endif
-                                <input type="file" name="speakers[{{ $index }}][photo]" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" accept="image/*">
+                                <input 
+                                    type="file" 
+                                    name="speakers[{{ $index }}][photo]" 
+                                    class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-500 file:text-white hover:file:bg-blue-600 transition-colors" 
+                                    accept="image/*"
+                                >
                             </div>
                         </div>
                     @endforeach
@@ -189,12 +286,18 @@
             </div>
         </div>
 
-        <div class="flex items-center justify-end">
-            <a href="{{ route('admin.events.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 mr-3">
+        <div class="flex items-center justify-end gap-3">
+            <a 
+                href="{{ route('admin.events.index') }}" 
+                class="inline-flex items-center px-4 py-2 text-sm text-gray-700 bg-gray-200 rounded shadow hover:bg-gray-300 transition-colors"
+            >
                 Cancelar
             </a>
 
-            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+            <button 
+                type="submit" 
+                class="inline-flex items-center px-4 py-2 text-sm text-white bg-blue-500 rounded shadow hover:bg-blue-600 active:bg-blue-700 transition-colors"
+            >
                 Atualizar Evento
             </button>
         </div>
@@ -203,8 +306,8 @@
 
 <!-- Template para novos palestrantes -->
 <template id="speaker-template">
-    <div class="speaker-card bg-gray-50 rounded-lg p-4 relative">
-        <button type="button" class="remove-speaker absolute top-2 right-2 text-gray-400 hover:text-red-500">
+    <div class="speaker-card bg-stone-50 rounded-lg p-4 relative shadow-xs">
+        <button type="button" class="remove-speaker absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
@@ -213,30 +316,52 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Palestrante <span class="text-red-500">*</span></label>
-                <input type="text" name="speakers[0][name]" class="speaker-name shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md" required>
+                <input 
+                    type="text" 
+                    name="speakers[0][name]" 
+                    class="speaker-name block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors" 
+                    required
+                >
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Instituição</label>
-                    <input type="text" name="speakers[0][institution]" class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                    <input 
+                        type="text" 
+                        name="speakers[0][institution]" 
+                        class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors"
+                    >
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Cargo/Função</label>
-                    <input type="text" name="speakers[0][role]" class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                    <input 
+                        type="text" 
+                        name="speakers[0][role]" 
+                        class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors"
+                    >
                 </div>
             </div>
         </div>
 
         <div class="mt-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Mini Biografia</label>
-            <textarea name="speakers[0][bio]" rows="2" class="shadow-sm focus:ring-purple-500 focus:border-purple-500 block w-full sm:text-sm border-gray-300 rounded-md"></textarea>
+            <textarea 
+                name="speakers[0][bio]" 
+                rows="2" 
+                class="block w-full px-4 py-2 border-1 border-gray-300 rounded text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors"
+            ></textarea>
         </div>
 
         <div class="mt-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Foto (opcional)</label>
-            <input type="file" name="speakers[0][photo]" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100" accept="image/*">
+            <input 
+                type="file" 
+                name="speakers[0][photo]" 
+                class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-500 file:text-white hover:file:bg-blue-600 transition-colors" 
+                accept="image/*"
+            >
         </div>
     </div>
 </template>

@@ -46,5 +46,4 @@ export default {
     },
 
     plugins: [forms, typography],
-    mode: 'jit',
 };

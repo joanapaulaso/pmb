@@ -17,3 +17,6 @@ yarn-error.log
 deploy.sh
 /public/hot
 /public/uploads
+/gpt
+.prettierrc
+

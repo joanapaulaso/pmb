@@ -12,7 +12,7 @@ use App\Models\Laboratory;
 use App\Models\UserCategory;
 use Illuminate\Support\Facades\Log;
 
-class UpdateProfileInformationForm extends Component
+class ProfileUpdate extends Component
 {
     use WithFileUploads;
 
@@ -35,13 +35,17 @@ class UpdateProfileInformationForm extends Component
 
     public function mount()
     {
-        $this->state = Auth::user()->withoutRelations()->toArray();
+        $user = Auth::user();
+        $this->state = [
+            'name' => $user->name, // Alterado de 'full_name' para 'name'
+            'email' => $user->email,
+        ];
 
-        $profile = Profile::where('user_id', Auth::user()->id)->first();
+        $profile = Profile::where('user_id', $user->id)->first();
         if ($profile) {
             $this->profileData = [
                 'gender' => $profile->gender,
-                'birth_date' => $profile->birth_date,
+                'birth_date' => $profile->birth_date ? $profile->birth_date->format('Y-m-d') : null, // Formatado para o input date
                 'isInternational' => $profile->country_code && $profile->country_code !== 'BR',
                 'country_code' => $profile->country_code,
                 'state_id' => $profile->state_id,
@@ -102,6 +106,7 @@ class UpdateProfileInformationForm extends Component
                 'subcategory' => $category->subcategory_name,
             ];
         })->toArray();
+        \Log::info("Loaded user categories for user " . Auth::user()->id . ": " . json_encode($this->selectedSubcategories));
     }
 
     public function updatedSelectedCategory($value)
@@ -147,7 +152,7 @@ class UpdateProfileInformationForm extends Component
         }
     }
 
-    public function updatedIsInternational($value)
+    public function updatedProfileDataIsInternational($value)
     {
         if ($value) {
             $this->profileData['state_id'] = null;
@@ -189,6 +194,7 @@ class UpdateProfileInformationForm extends Component
 
     public function optionSelected($data)
     {
+        \Log::info("ProfileUpdate received optionSelected: " . json_encode($data));
         if (isset($data['field']) && array_key_exists($data['field'], $this->profileData)) {
             $this->profileData[$data['field']] = $data['value'];
 
@@ -221,13 +227,12 @@ class UpdateProfileInformationForm extends Component
 
         $profile = Profile::where('user_id', Auth::user()->id)->first() ?? new Profile(['user_id' => Auth::user()->id]);
 
-        // Atualizar ou criar instituição
         if ($this->profileData['showNewInstitution'] && !empty($this->profileData['new_institution'])) {
             $institution = Institution::create([
                 'name' => $this->profileData['new_institution'],
                 'state_id' => $this->profileData['isInternational'] ? null : $this->profileData['state_id'],
                 'municipality_id' => $this->profileData['isInternational'] ? null : $this->profileData['municipality_id'],
-                'country_code' => $this->profileData['country_code'] ?? 'BR',
+                'country_code' => $this->profileData['isInternational'] ? ($this->profileData['country_code'] ?? 'BR') : 'BR',
                 'address' => $this->profileData['institution_address'] ?? null,
             ]);
             $this->profileData['institution_id'] = $institution->id;
@@ -238,7 +243,6 @@ class UpdateProfileInformationForm extends Component
             }
         }
 
-        // Atualizar ou criar laboratório
         if (($this->profileData['showNewInstitution'] || $this->profileData['showNewLaboratory']) && !empty($this->profileData['new_laboratory'])) {
             $laboratory = Laboratory::create([
                 'name' => $this->profileData['new_laboratory'],
@@ -249,10 +253,9 @@ class UpdateProfileInformationForm extends Component
             $this->profileData['laboratory_id'] = $laboratory->id;
         }
 
-        // Atualizar perfil
         $profile->gender = $this->profileData['gender'] ?? null;
         $profile->birth_date = $this->profileData['birth_date'] ?? null;
-        $profile->country_code = $this->profileData['country_code'] ?? 'BR';
+        $profile->country_code = $this->profileData['isInternational'] ? ($this->profileData['country_code'] ?? 'BR') : 'BR';
         $profile->state_id = $this->profileData['isInternational'] ? null : $this->profileData['state_id'];
         $profile->municipality_id = $this->profileData['isInternational'] ? null : $this->profileData['municipality_id'];
         $profile->institution_id = $this->profileData['institution_id'] ?? null;
@@ -260,15 +263,35 @@ class UpdateProfileInformationForm extends Component
         $profile->lab_coordinator = $this->profileData['lab_coordinator'] ?? false;
         $profile->save();
 
-        // Atualizar categorias de interesse
+        \Log::info("Salvando categorias para o usuário " . Auth::user()->id . ": " . json_encode($this->selectedSubcategories));
         UserCategory::where('user_id', Auth::user()->id)->delete();
         foreach ($this->selectedSubcategories as $selection) {
             if (isset($selection['category']) && isset($selection['subcategory'])) {
+                $categoryName = $selection['category'];
+                $subcategoryName = $selection['subcategory'];
+
+                // Busca ou cria a categoria pai
+                $category = \App\Models\Category::firstOrCreate(
+                    ['name' => $categoryName, 'type' => 'category'],
+                    ['name' => $categoryName, 'type' => 'category']
+                );
+
+                // Busca ou cria a subcategoria
+                $subcategory = \App\Models\Category::firstOrCreate(
+                    ['name' => $subcategoryName, 'type' => 'subcategory', 'parent_id' => $category->id],
+                    ['name' => $subcategoryName, 'type' => 'subcategory', 'parent_id' => $category->id]
+                );
+
+                // Salva o registro em user_categories com o category_id da subcategoria
                 UserCategory::create([
                     'user_id' => Auth::user()->id,
-                    'category_name' => $selection['category'],
-                    'subcategory_name' => $selection['subcategory'],
+                    'category_id' => $subcategory->id,
+                    'category_name' => $categoryName,
+                    'subcategory_name' => $subcategoryName,
                 ]);
+                \Log::info("Categoria salva: user_id=" . Auth::user()->id . ", category_id={$subcategory->id}, category_name={$categoryName}, subcategory_name={$subcategoryName}");
+            } else {
+                \Log::warning("Seleção de categoria inválida ao salvar para o usuário " . Auth::user()->id . ": " . json_encode($selection));
             }
         }
 
@@ -278,7 +301,6 @@ class UpdateProfileInformationForm extends Component
 
         $this->dispatch('saved');
     }
-
     public function deleteProfilePhoto()
     {
         Auth::user()->deleteProfilePhoto();
@@ -298,7 +320,6 @@ class UpdateProfileInformationForm extends Component
 
     public function render()
     {
-        Log::info('Rendering view: livewire.profile.update-profile-information-form');
-        return view('livewire.profile.update-profile-information-form');
+        return view('livewire.profile.profile-update');
     }
 }

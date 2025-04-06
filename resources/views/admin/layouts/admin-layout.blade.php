@@ -29,7 +29,7 @@
         <div class="flex h-screen bg-gray-100">
             <!-- Sidebar -->
             <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-md transform transition-transform duration-300 lg:translate-x-0" id="sidebar">
-                <div class="flex items-center justify-between p-4 border-b">
+                <div class="flex items-center justify-between p-4 border-b border-gray-200">
                     <div class="flex items-center">
                         <img class="h-8 w-auto" src="{{ Vite::asset('resources/images/logo.png') }}" alt="Logo">
                         <h1 class="ml-2 text-xl font-bold">Admin Panel</h1>
