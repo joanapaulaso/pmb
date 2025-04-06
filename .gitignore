@@ -19,4 +19,5 @@ deploy.sh
 /public/uploads
 /gpt
 .prettierrc
+composer-setup.php
 
