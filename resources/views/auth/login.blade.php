@@ -48,7 +48,7 @@
             <div class="block mt-4">
                 <label for="remember_me" class="flex items-center">
                     <x-checkbox id="remember_me" name="remember" class="form-checkbox text-blue-500" />
-                    <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
+                    <span class="ms-2 text-sm text-gray-600">{{ __('Lembrar meus dados') }}</span>
                 </label>
             </div>
 
@@ -58,7 +58,7 @@
                         class="underline text-sm text-gray-600 hover:text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-transparent transition-colors" 
                         href="{{ route('password.request') }}"
                     >
-                        {{ __('Forgot your password?') }}
+                        {{ __('Esqueceu a senha?') }}
                     </a>
                 @endif
 

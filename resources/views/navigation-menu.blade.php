@@ -50,7 +50,7 @@
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
                 <!-- Teams Dropdown -->
-                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures() && Auth::check())
+                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures() && Auth::check() && Auth::user()->profile->lab_coordinator)
                     <div class="ms-3 relative">
                         @if(Auth::user()->allTeams()->count() > 0)
                             <x-dropdown align="right" width="60">
@@ -79,14 +79,14 @@
                                             </x-dropdown-link>
                                         @endif
 
-                                        @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
+                                        {{-- @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
                                             <x-dropdown-link href="{{ route('teams.create') }}" class="text-gray-700 hover:bg-gray-100 transition-colors">
                                                 {{ __('Create New Team') }}
                                             </x-dropdown-link>
-                                        @endcan
+                                        @endcan --}}
 
                                         <!-- Team Switcher -->
-                                        @if (Auth::user()->allTeams()->count() > 1)
+                                        {{-- @if (Auth::user()->allTeams()->count() > 1)
                                             <div class="border-t border-gray-200"></div>
                                             <div class="block px-4 py-2 text-xs text-gray-400">
                                                 {{ __('Switch Teams') }}
@@ -94,22 +94,17 @@
                                             @foreach (Auth::user()->allTeams() as $team)
                                                 <x-switchable-team :team="$team" />
                                             @endforeach
-                                        @endif
+                                        @endif --}}
                                     </div>
                                 </x-slot>
                             </x-dropdown>
-                        @else
-                            @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
-                                <a href="{{ route('teams.create') }}" class="inline-flex items-center px-4 py-2 bg-blue-500 border border-transparent rounded shadow font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 focus:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
-                                    {{ __('Create Team') }}
-                                </a>
-                            @endcan
                         @endif
                     </div>
                 @endif
 
                 <!-- Settings Dropdown -->
                 @if (Auth::check())
+                {{ Log::info('Lab Coordinator Status', ['user_id' => Auth::user()->id, 'lab_coordinator' => Auth::user()->profile->lab_coordinator ?? 'not set']) }}
                 <div class="ms-3 relative">
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
@@ -218,6 +213,7 @@
 
         <!-- Responsive Settings Options -->
         @if (Auth::check())
+        {{ Log::info('Lab Coordinator Status', ['user_id' => Auth::user()->id, 'lab_coordinator' => Auth::user()->profile->lab_coordinator ?? 'not set']) }}
         <div class="pt-4 pb-1 border-t border-gray-200 bg-stone-50">
             <div class="flex items-center px-4">
                 @if (Laravel\Jetstream\Jetstream::managesProfilePhotos())
@@ -256,7 +252,7 @@
                     </x-responsive-nav-link>
                 </form>
 
-                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures())
+                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures() && Auth::user()->profile->lab_coordinator)
                     <div class="border-t border-gray-200"></div>
                     <div class="block px-4 py-2 text-xs text-gray-400">
                         {{ __('Manage Team') }}
@@ -269,13 +265,13 @@
                             </x-responsive-nav-link>
                         @endif
 
-                        @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
+                        {{-- @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
                             <x-responsive-nav-link href="{{ route('teams.create') }}" :active="request()->routeIs('teams.create')" class="text-gray-700 hover:bg-gray-100 transition-colors">
                                 {{ __('Create New Team') }}
                             </x-responsive-nav-link>
-                        @endcan
+                        @endcan --}}
 
-                        @if (Auth::user()->allTeams()->count() > 1)
+                        {{-- @if (Auth::user()->allTeams()->count() > 1)
                             <div class="border-t border-gray-200"></div>
                             <div class="block px-4 py-2 text-xs text-gray-400">
                                 {{ __('Switch Teams') }}
@@ -283,13 +279,7 @@
                             @foreach (Auth::user()->allTeams() as $team)
                                 <x-switchable-team :team="$team" component="responsive-nav-link" class="text-gray-700 hover:bg-gray-100 transition-colors" />
                             @endforeach
-                        @endif
-                    @else
-                        @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
-                            <x-responsive-nav-link href="{{ route('teams.create') }}" class="text-gray-700 hover:bg-gray-100 transition-colors">
-                                {{ __('Create Team') }}
-                            </x-responsive-nav-link>
-                        @endcan
+                        @endif --}}
                     @endif
                 @endif
             </div>

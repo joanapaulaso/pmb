@@ -46,7 +46,7 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->session()->get('login.id'));
         });
 
-                Livewire::component('searchable-dropdown', SearchableDropdown::class);
+        Livewire::component('searchable-dropdown', SearchableDropdown::class);
 
         Livewire::component('profile.profile-search-select', ProfileSearchSelect::class);
     }

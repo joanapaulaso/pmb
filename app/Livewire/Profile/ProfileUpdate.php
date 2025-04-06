@@ -10,7 +10,10 @@ use App\Models\Profile;
 use App\Models\Institution;
 use App\Models\Laboratory;
 use App\Models\UserCategory;
+use App\Models\PendingLabCoordinator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 
 class ProfileUpdate extends Component
 {
@@ -20,6 +23,7 @@ class ProfileUpdate extends Component
     public $profileData = [];
     public $photo;
     public $verificationLinkSent = false;
+    public $pendingLabCoordinatorApproval = false; // Track if a lab coordinator request is pending
 
     // Campos para categorias
     public $categories = [];
@@ -33,11 +37,13 @@ class ProfileUpdate extends Component
         'removeSubcategory',
     ];
 
+    public $originalLabCoordinator; // Store the original lab_coordinator value
+
     public function mount()
     {
         $user = Auth::user();
         $this->state = [
-            'name' => $user->name, // Alterado de 'full_name' para 'name'
+            'name' => $user->name,
             'email' => $user->email,
         ];
 
@@ -45,7 +51,7 @@ class ProfileUpdate extends Component
         if ($profile) {
             $this->profileData = [
                 'gender' => $profile->gender,
-                'birth_date' => $profile->birth_date ? $profile->birth_date->format('Y-m-d') : null, // Formatado para o input date
+                'birth_date' => $profile->birth_date ? $profile->birth_date->format('Y-m-d') : null,
                 'isInternational' => $profile->country_code && $profile->country_code !== 'BR',
                 'country_code' => $profile->country_code,
                 'state_id' => $profile->state_id,
@@ -59,6 +65,7 @@ class ProfileUpdate extends Component
                 'showNewLaboratory' => false,
                 'new_laboratory' => '',
             ];
+            $this->originalLabCoordinator = $profile->lab_coordinator; // Store the original value
         } else {
             $this->profileData = [
                 'gender' => null,
@@ -76,10 +83,82 @@ class ProfileUpdate extends Component
                 'showNewLaboratory' => false,
                 'new_laboratory' => '',
             ];
+            $this->originalLabCoordinator = false;
         }
+
+        // Check for pending lab coordinator request
+        $pendingRequest = PendingLabCoordinator::where('user_id', $user->id)
+            ->where('approved', false)
+            ->where('expires_at', '>', now())
+            ->first();
+        $this->pendingLabCoordinatorApproval = $pendingRequest !== null;
 
         $this->loadCategories();
         $this->loadUserCategories();
+    }
+
+    public function updatedProfileDataLabCoordinator($value)
+    {
+        // If lab_coordinator changes from false to true, send authorization email
+        if (!$this->originalLabCoordinator && $value && !$this->pendingLabCoordinatorApproval) {
+            if (!$this->profileData['laboratory_id'] && !$this->profileData['new_laboratory']) {
+                $this->addError('profileData.laboratory_id', 'Por favor, selecione ou crie um laboratório antes de marcar como coordenador.');
+                $this->profileData['lab_coordinator'] = false;
+                return;
+            }
+
+            $laboratoryId = $this->profileData['laboratory_id'];
+            if (!$laboratoryId && $this->profileData['new_laboratory']) {
+                // Create the laboratory if new_laboratory is provided
+                $laboratory = Laboratory::create([
+                    'name' => $this->profileData['new_laboratory'],
+                    'institution_id' => $this->profileData['institution_id'],
+                    'state_id' => $this->profileData['isInternational'] ? null : $this->profileData['state_id'],
+                ]);
+                $laboratoryId = $laboratory->id;
+                $this->profileData['laboratory_id'] = $laboratoryId;
+            }
+
+            $token = Str::random(60);
+            PendingLabCoordinator::create([
+                'user_id' => Auth::user()->id,
+                'laboratory_id' => $laboratoryId,
+                'token' => $token,
+                'expires_at' => now()->addDays(7),
+            ]);
+
+            $this->sendLabCoordinatorApprovalEmail($laboratoryId, $token);
+            $this->pendingLabCoordinatorApproval = true;
+            $this->profileData['lab_coordinator'] = false; // Revert until approved
+        }
+    }
+
+    private function sendLabCoordinatorApprovalEmail($laboratoryId, $token)
+    {
+        $user = Auth::user();
+        $laboratory = Laboratory::find($laboratoryId);
+        $approvalUrl = route('lab-coordinator.approve', ['token' => $token]);
+        $rejectionUrl = route('lab-coordinator.reject', ['token' => $token]);
+
+        Mail::raw(
+            "Um usuário solicitou ser coordenador do laboratório {$laboratory->name}.\n" .
+            "Nome: {$user->name}\n" .
+            "Email: {$user->email}\n" .
+            "Aprovar: {$approvalUrl}\n" .
+            "Rejeitar: {$rejectionUrl}\n" .
+            "Este link expira em 7 dias.",
+            function ($message) use ($user) {
+                $message->to('contato@portalmetabolomicabrasil.com.br')
+                        ->subject("Solicitação de Coordenador de Laboratório: {$user->name}")
+                        ->from(config('mail.from.address'), config('mail.from.name'));
+            }
+        );
+
+        Log::info("Email de aprovação de coordenador enviado para contato@portalmetabolomicabrasil.com.br", [
+            'user_id' => $user->id,
+            'laboratory_id' => $laboratoryId,
+            'token' => $token,
+        ]);
     }
 
     public function loadCategories()
@@ -106,7 +185,7 @@ class ProfileUpdate extends Component
                 'subcategory' => $category->subcategory_name,
             ];
         })->toArray();
-        \Log::info("Loaded user categories for user " . Auth::user()->id . ": " . json_encode($this->selectedSubcategories));
+        Log::info("Loaded user categories for user " . Auth::user()->id . ": " . json_encode($this->selectedSubcategories));
     }
 
     public function updatedSelectedCategory($value)
@@ -194,7 +273,7 @@ class ProfileUpdate extends Component
 
     public function optionSelected($data)
     {
-        \Log::info("ProfileUpdate received optionSelected: " . json_encode($data));
+        Log::info("ProfileUpdate received optionSelected: " . json_encode($data));
         if (isset($data['field']) && array_key_exists($data['field'], $this->profileData)) {
             $this->profileData[$data['field']] = $data['value'];
 
@@ -260,38 +339,35 @@ class ProfileUpdate extends Component
         $profile->municipality_id = $this->profileData['isInternational'] ? null : $this->profileData['municipality_id'];
         $profile->institution_id = $this->profileData['institution_id'] ?? null;
         $profile->laboratory_id = $this->profileData['laboratory_id'] ?? null;
-        $profile->lab_coordinator = $this->profileData['lab_coordinator'] ?? false;
+        // lab_coordinator is updated via PendingLabCoordinators, so don't set it here
         $profile->save();
 
-        \Log::info("Salvando categorias para o usuário " . Auth::user()->id . ": " . json_encode($this->selectedSubcategories));
+        Log::info("Salvando categorias para o usuário " . Auth::user()->id . ": " . json_encode($this->selectedSubcategories));
         UserCategory::where('user_id', Auth::user()->id)->delete();
         foreach ($this->selectedSubcategories as $selection) {
             if (isset($selection['category']) && isset($selection['subcategory'])) {
                 $categoryName = $selection['category'];
                 $subcategoryName = $selection['subcategory'];
 
-                // Busca ou cria a categoria pai
                 $category = \App\Models\Category::firstOrCreate(
                     ['name' => $categoryName, 'type' => 'category'],
                     ['name' => $categoryName, 'type' => 'category']
                 );
 
-                // Busca ou cria a subcategoria
                 $subcategory = \App\Models\Category::firstOrCreate(
                     ['name' => $subcategoryName, 'type' => 'subcategory', 'parent_id' => $category->id],
                     ['name' => $subcategoryName, 'type' => 'subcategory', 'parent_id' => $category->id]
                 );
 
-                // Salva o registro em user_categories com o category_id da subcategoria
                 UserCategory::create([
                     'user_id' => Auth::user()->id,
                     'category_id' => $subcategory->id,
                     'category_name' => $categoryName,
                     'subcategory_name' => $subcategoryName,
                 ]);
-                \Log::info("Categoria salva: user_id=" . Auth::user()->id . ", category_id={$subcategory->id}, category_name={$categoryName}, subcategory_name={$subcategoryName}");
+                Log::info("Categoria salva: user_id=" . Auth::user()->id . ", category_id={$subcategory->id}, category_name={$categoryName}, subcategory_name={$subcategoryName}");
             } else {
-                \Log::warning("Seleção de categoria inválida ao salvar para o usuário " . Auth::user()->id . ": " . json_encode($selection));
+                Log::warning("Seleção de categoria inválida ao salvar para o usuário " . Auth::user()->id . ": " . json_encode($selection));
             }
         }
 
@@ -301,6 +377,7 @@ class ProfileUpdate extends Component
 
         $this->dispatch('saved');
     }
+
     public function deleteProfilePhoto()
     {
         Auth::user()->deleteProfilePhoto();

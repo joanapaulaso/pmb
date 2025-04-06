@@ -256,14 +256,6 @@ class RegisterComponent extends Component
         $this->validate();
 
         try {
-            \Log::info('Estado completo antes da validação:', $this->all());
-            \Log::info('Valores específicos antes da validação:', [
-                'state_id' => $this->state_id,
-                'municipality_id' => $this->municipality_id,
-                'institution_id' => $this->institution_id,
-                'isInternational' => $this->isInternational,
-            ]);
-
             $data = [
                 'full_name' => $this->full_name,
                 'email' => $this->email,
@@ -298,11 +290,11 @@ class RegisterComponent extends Component
 
             Log::info('Usuário criado com sucesso:', ['user_id' => $user->id, 'user_data' => $user->toArray()]);
 
-            // Determinar o nome do laboratório (existente ou novo)
+            // Move team creation after user creation but before login
             $laboratory = Laboratory::find($user->profile->laboratory_id);
             $laboratoryName = $laboratory ? $laboratory->name : ($this->new_laboratory ?: null);
 
-            if ($laboratoryName) {
+            if ($laboratoryName && !$this->lab_coordinator) { // Only create team if not lab coordinator (pending approval)
                 $createTeam = new CreateTeam();
                 $teamInput = [
                     'name' => $laboratoryName,
@@ -329,36 +321,33 @@ class RegisterComponent extends Component
                 $user->teams()->attach($team->id, ['created_at' => now(), 'updated_at' => now()]);
                 Log::info("Usuário {$user->id} associado ao time {$team->id} na tabela team_user");
 
-                if (!$this->lab_coordinator) {
-                    $role = 'editor';
-                    $addTeamMember = new AddTeamMember();
-                    try {
-                        $addTeamMember->add($user, $team, $user->email, $role);
-                        Log::info('Usuário vinculado ao Team com papel:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $role]);
-                    } catch (\Exception $e) {
-                        Log::error('Erro ao vincular usuário ao Team:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-                    }
-                } else {
-                    Log::info('Usuário é o coordenador e já é o dono do time; nenhuma ação adicional necessária.', ['user_id' => $user->id, 'team_id' => $team->id]);
+                $role = 'editor';
+                $addTeamMember = new AddTeamMember();
+                try {
+                    $addTeamMember->add($user, $team, $user->email, $role);
+                    Log::info('Usuário vinculado ao Team com papel:', ['user_id' => $user->id, 'team_id' => $team->id, 'role' => $role]);
+                } catch (\Exception $e) {
+                    Log::error('Erro ao vincular usuário ao Team:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
                 }
-            } else {
-                Log::warning('Nenhum laboratório definido para criar o Team.');
-            }
-
-            if (!($user instanceof \Illuminate\Contracts\Auth\Authenticatable)) {
-                throw new \Exception('O objeto User não implementa Authenticatable.');
+            } elseif ($this->lab_coordinator) {
+                Log::info('Aguardando aprovação para coordenador; team não criado ainda.', ['user_id' => $user->id]);
             }
 
             Auth::login($user);
             Log::info('Login realizado com sucesso para o usuário:', ['user_id' => $user->id]);
+
+            if (!$user->hasVerifiedEmail()) {
+                return redirect()->route('verification.notice');
+            }
+
             return redirect()->route('portal')->with('message', 'Conta criada e login realizado com sucesso!');
         } catch (\Exception $e) {
             \Log::error('Erro ao registrar usuário: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             session()->flash('error', 'Ocorreu um erro ao criar sua conta. Por favor, tente novamente.');
             return null;
         }
-    }
-
+    }    
+    
     public function debugState()
     {
         Log::info('Estado atual do RegisterComponent:', $this->all());

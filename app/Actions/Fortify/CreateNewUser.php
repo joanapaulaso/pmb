@@ -6,11 +6,13 @@ use App\Models\User;
 use App\Models\Profile;
 use App\Models\Institution;
 use App\Models\Laboratory;
+use App\Models\PendingLabCoordinator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
 ini_set('max_execution_time', 120); // 2 minutos
@@ -35,6 +37,7 @@ class CreateNewUser implements CreatesNewUsers
             'institution_address' => ['nullable', 'string', 'max:255'],
             'admin' => ['nullable', 'boolean'],
             'team_id' => ['nullable', 'exists:teams,id'],
+            'lab_coordinator' => ['nullable', 'boolean'],
         ])->validate();
 
         // Criar ou atualizar instituição com o endereço
@@ -56,12 +59,13 @@ class CreateNewUser implements CreatesNewUsers
 
         // Criar ou obter laboratório
         if (!empty($input['new_laboratory'])) {
-            $input['laboratory_id'] = $this->getOrCreateLaboratory(
+            $laboratoryId = $this->getOrCreateLaboratory(
                 $input['new_laboratory'],
                 $input['institution_id'] ?? null,
                 $input['isInternational'] ? null : ($input['state_id'] ?? null),
                 $input['team_id'] ?? null
             );
+            $input['laboratory_id'] = $laboratoryId; // Ensure laboratory_id is set
         }
 
         $user = User::create([
@@ -71,17 +75,37 @@ class CreateNewUser implements CreatesNewUsers
             'admin' => isset($input['admin']) ? (bool) $input['admin'] : false,
         ]);
 
-        Profile::create([
+        $profileData = [
             'user_id' => $user->id,
             'birth_date' => $input['birth_date'] ?? null,
             'institution_id' => $input['institution_id'] ?? null,
             'country_code' => $input['country_code'] ?? null,
             'state_id' => $input['isInternational'] ? null : ($input['state_id'] ?? null),
             'municipality_id' => $input['isInternational'] ? null : ($input['municipality_id'] ?? null),
-            'lab_coordinator' => isset($input['lab_coordinator']) ? 1 : 0,
             'laboratory_id' => $input['laboratory_id'] ?? null,
             'gender' => $input['gender'] ?? null,
-        ]);
+        ];
+
+        Profile::create($profileData);
+
+        // Handle lab coordinator request
+        if (isset($input['lab_coordinator']) && $input['lab_coordinator'] && $input['laboratory_id']) {
+            $token = Str::random(60);
+            PendingLabCoordinator::create([
+                'user_id' => $user->id,
+                'laboratory_id' => $input['laboratory_id'],
+                'token' => $token,
+                'expires_at' => now()->addDays(7),
+            ]);
+
+            $this->sendLabCoordinatorApprovalEmail($user, $input['laboratory_id'], $token);
+        } else {
+            Log::info('Lab coordinator request not processed', [
+                'lab_coordinator' => $input['lab_coordinator'] ?? 'not set',
+                'laboratory_id' => $input['laboratory_id'] ?? 'not set',
+            ]);
+            $user->profile->update(['lab_coordinator' => false]);
+        }
 
         if (!empty($input['team_id'])) {
             $team = \App\Models\Team::find($input['team_id']);
@@ -98,6 +122,33 @@ class CreateNewUser implements CreatesNewUsers
         }
 
         return $user;
+    }
+
+    private function sendLabCoordinatorApprovalEmail($user, $laboratoryId, $token)
+    {
+        $laboratory = Laboratory::find($laboratoryId);
+        $approvalUrl = route('lab-coordinator.approve', ['token' => $token]);
+        $rejectionUrl = route('lab-coordinator.reject', ['token' => $token]);
+
+        \Mail::raw(
+            "Um usuário solicitou ser coordenador do laboratório {$laboratory->name}.\n" .
+            "Nome: {$user->name}\n" .
+            "Email: {$user->email}\n" .
+            "Aprovar: {$approvalUrl}\n" .
+            "Rejeitar: {$rejectionUrl}\n" .
+            "Este link expira em 7 dias.",
+            function ($message) use ($user) {
+                $message->to('contato@portalmetabolomicabrasil.com.br')
+                        ->subject("Solicitação de Coordenador de Laboratório: {$user->name}")
+                        ->from(config('mail.from.address'), config('mail.from.name'));
+            }
+        );
+
+        \Log::info("Email de aprovação de coordenador enviado para contato@portalmetabolomicabrasil.com.br", [
+            'user_id' => $user->id,
+            'laboratory_id' => $laboratoryId,
+            'token' => $token,
+        ]);
     }
 
     /**

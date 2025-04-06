@@ -193,17 +193,6 @@
                         />
                         <x-input-error for="profileData.new_institution" class="mt-1 text-sm text-red-500" />
                     </div>
-
-                    <div class="space-y-2">
-                        <x-label for="institution_address" value="{{ __('Endereço da Instituição') }}" class="block text-sm font-medium text-gray-700" />
-                        <x-input 
-                            id="institution_address" 
-                            type="text" 
-                            class="block w-full" 
-                            wire:model.live="profileData.institution_address" 
-                        />
-                        <x-input-error for="profileData.institution_address" class="mt-1 text-sm text-red-500" />
-                    </div>
                 </div>
             </div>
 
@@ -248,16 +237,23 @@
                         <x-input-error for="profileData.new_laboratory" class="mt-1 text-sm text-red-500" />
                     </div>
 
-                    <div class="flex items-center">
-                        <x-label for="lab_coordinator" class="inline-flex items-center">
-                            <input 
-                                type="checkbox" 
-                                id="lab_coordinator" 
-                                wire:model.live="profileData.lab_coordinator" 
-                                class="form-checkbox h-4 w-4 text-blue-500 border-1 border-gray-300 rounded" 
-                            />
-                            <span class="ml-2 text-sm text-gray-700">{{ __('Coordenador de Laboratório') }}</span>
-                        </x-label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <x-label for="lab_coordinator" class="inline-flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    id="lab_coordinator" 
+                                    wire:model.live="profileData.lab_coordinator" 
+                                    class="form-checkbox h-4 w-4 text-blue-500 border-1 border-gray-300 rounded" 
+                                />
+                                <span class="ml-2 text-sm text-gray-700">{{ __('Coordenador de Laboratório') }}</span>
+                            </x-label>
+                        </div>
+                        @if ($pendingLabCoordinatorApproval)
+                            <p class="text-sm text-orange-600">
+                                {{ __('Aprovação para se tornar Coordenador de Laboratório está pendente dos administradores.') }}
+                            </p>
+                        @endif
                     </div>
                 </div>
             </div>

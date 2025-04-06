@@ -1,16 +1,20 @@
-<x-guest-layout>
+@extends('layouts.guest')
+
+@section('content')
     <x-authentication-card>
         <x-slot name="logo">
-            <x-authentication-card-logo />
+            <div class="p-5 shrink-0 flex items-center justify-center">
+                <img class="h-20 w-auto" src="{{ Vite::asset('resources/images/logo.png') }}" alt="Logo">
+            </div>
         </x-slot>
 
         <div class="mb-4 text-sm text-gray-600">
-            {{ __('Before continuing, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
+            {{ __('Para continuar, clique no botão abaixo solicitar a verificação do seu e-mail. Instruções serão enviadas ao e-mail cadastrado.') }}
         </div>
 
         @if (session('status') == 'verification-link-sent')
             <div class="mb-4 font-medium text-sm text-green-600">
-                {{ __('A new verification link has been sent to the email address you provided in your profile settings.') }}
+                {{ __('Um link de verificação foi enviado para o endereço de e-mail que você forneceu nas configurações do seu perfil.') }}
             </div>
         @endif
 
@@ -20,17 +24,16 @@
 
                 <div>
                     <x-button type="submit">
-                        {{ __('Resend Verification Email') }}
+                        {{ __('Enviar E-mail de Verificação') }}
                     </x-button>
                 </div>
             </form>
 
             <div>
                 <a
-                    href="{{ route('profile.show') }}"
-                    class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    href="{{ route('profile.show') }}" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ms-2"
                 >
-                    {{ __('Edit Profile') }}</a>
+                    {{ __('Editar Perfil') }}</a>
 
                 <form method="POST" action="{{ route('logout') }}" class="inline">
                     @csrf
@@ -42,4 +45,4 @@
             </div>
         </div>
     </x-authentication-card>
-</x-guest-layout>
+@endsection

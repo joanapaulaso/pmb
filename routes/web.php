@@ -9,6 +9,7 @@ use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\LabsMapController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LabCoordinatorController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\VideoController;
 use App\Http\Controllers\PublicEventController;
@@ -24,6 +25,11 @@ use App\Http\Controllers\Admin\EventController;
 Route::get('/', function () {
     return view('welcome');
 })->name('welcome');
+
+Route::get('/lab-coordinator/approve/{token}', [LabCoordinatorController::class, 'approve'])
+    ->name('lab-coordinator.approve');
+Route::get('/lab-coordinator/reject/{token}', [LabCoordinatorController::class, 'reject'])
+    ->name('lab-coordinator.reject');
 
 // Rotas para vídeos e eventos (públicas)
 Route::prefix('videos')->name('videos.')->group(function () {
