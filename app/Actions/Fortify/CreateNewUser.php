@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
-ini_set('max_execution_time', 120); // 2 minutos
+ini_set('max_execution_time', 120);
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -39,6 +39,9 @@ class CreateNewUser implements CreatesNewUsers
             'team_id' => ['nullable', 'exists:teams,id'],
             'lab_coordinator' => ['nullable', 'boolean'],
         ])->validate();
+
+        // Log input for debugging
+        Log::info('Input recebido em CreateNewUser:', $input);
 
         // Criar ou atualizar instituição com o endereço
         if (!empty($input['new_institution'])) {
@@ -65,7 +68,8 @@ class CreateNewUser implements CreatesNewUsers
                 $input['isInternational'] ? null : ($input['state_id'] ?? null),
                 $input['team_id'] ?? null
             );
-            $input['laboratory_id'] = $laboratoryId; // Ensure laboratory_id is set
+            $input['laboratory_id'] = $laboratoryId;
+            Log::info('Laboratory ID atribuído:', ['laboratory_id' => $laboratoryId]);
         }
 
         $user = User::create([
@@ -151,9 +155,6 @@ class CreateNewUser implements CreatesNewUsers
         ]);
     }
 
-    /**
-     * Salva as categorias selecionadas pelo usuário
-     */
     private function saveUserCategories($user, $selectedSubcategories)
     {
         if (!Schema::hasTable('user_categories') || !Schema::hasTable('categories')) {
@@ -168,19 +169,16 @@ class CreateNewUser implements CreatesNewUsers
                 $categoryName = $selection['category'];
                 $subcategoryName = $selection['subcategory'];
 
-                // Busca ou cria a categoria pai
                 $category = \App\Models\Category::firstOrCreate(
                     ['name' => $categoryName, 'type' => 'category'],
                     ['name' => $categoryName, 'type' => 'category']
                 );
 
-                // Busca ou cria a subcategoria
                 $subcategory = \App\Models\Category::firstOrCreate(
                     ['name' => $subcategoryName, 'type' => 'subcategory', 'parent_id' => $category->id],
                     ['name' => $subcategoryName, 'type' => 'subcategory', 'parent_id' => $category->id]
                 );
 
-                // Salva o registro em user_categories com o category_id da subcategoria
                 \App\Models\UserCategory::create([
                     'user_id' => $user->id,
                     'category_id' => $subcategory->id,
@@ -194,9 +192,6 @@ class CreateNewUser implements CreatesNewUsers
         }
     }
 
-    /**
-     * Obtém ou cria um laboratório com base no nome, instituição, estado e time
-     */
     private function getOrCreateLaboratory($labName, $institutionId, $stateId, $teamId = null)
     {
         if (!$labName || !$institutionId) {
@@ -213,11 +208,12 @@ class CreateNewUser implements CreatesNewUsers
         $query = Laboratory::where('name', $labName)
             ->where('institution_id', $institution->id);
 
-        // Para usuários internacionais, state_id será null
-        if ($institution->country_code === 'BR' && !$stateId) {
-            \Log::warning("Estado é obrigatório para laboratórios de instituições brasileiras");
-            return null;
-        } elseif ($institution->country_code === 'BR') {
+        // Para usuários internacionais, state_id deve ser null
+        if ($institution->country_code === 'BR') {
+            if (!$stateId) {
+                \Log::warning("Estado é obrigatório para laboratórios de instituições brasileiras");
+                return null;
+            }
             $query->where('state_id', $stateId);
         } else {
             $query->whereNull('state_id');
@@ -233,14 +229,16 @@ class CreateNewUser implements CreatesNewUsers
 
         if (!$laboratory) {
             try {
+                // Use a default state_id for international labs to satisfy NOT NULL constraint
+                $defaultStateId = $institution->country_code === 'BR' ? $stateId : 999; // Replace 999 with your default state_id
                 $laboratory = Laboratory::create([
                     'name' => $labName,
                     'institution_id' => $institution->id,
-                    'state_id' => $institution->country_code === 'BR' ? $stateId : null,
+                    'state_id' => $defaultStateId,
                     'team_id' => $teamId,
                 ]);
                 \Log::info("Novo laboratório '{$labName}' criado para a instituição '{$institution->name}'" .
-                    ($institution->country_code === 'BR' ? " no estado {$stateId}" : " (internacional)") .
+                    ($institution->country_code === 'BR' ? " no estado {$stateId}" : " (internacional com state_id {$defaultStateId})") .
                     ($teamId ? " e time {$teamId}" : " sem time associado"));
             } catch (\Exception $e) {
                 \Log::error('Erro ao criar laboratório: ' . $e->getMessage());

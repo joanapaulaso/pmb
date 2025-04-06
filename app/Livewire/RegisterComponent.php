@@ -64,13 +64,13 @@ class RegisterComponent extends Component
 
         if ($this->showNewInstitution) {
             $rules['new_institution'] = 'required|string|max:255';
-            $rules['new_laboratory'] = 'required|string|max:255';
+            $rules['new_laboratory'] = $this->lab_coordinator ? 'required|string|max:255' : 'nullable|string|max:255';
         } else {
             $rules['institution_id'] = 'required|exists:institutions,id';
             if ($this->showNewLaboratory) {
-                $rules['new_laboratory'] = 'required|string|max:255';
+                $rules['new_laboratory'] = $this->lab_coordinator ? 'required|string|max:255' : 'nullable|string|max:255';
             } else {
-                $rules['laboratory_id'] = 'required|exists:laboratories,id';
+                $rules['laboratory_id'] = $this->lab_coordinator ? 'required|exists:laboratories,id' : 'nullable|exists:laboratories,id';
             }
         }
 
@@ -294,7 +294,7 @@ class RegisterComponent extends Component
             $laboratory = Laboratory::find($user->profile->laboratory_id);
             $laboratoryName = $laboratory ? $laboratory->name : ($this->new_laboratory ?: null);
 
-            if ($laboratoryName && !$this->lab_coordinator) { // Only create team if not lab coordinator (pending approval)
+            if ($laboratoryName && !$this->lab_coordinator) {
                 $createTeam = new CreateTeam();
                 $teamInput = [
                     'name' => $laboratoryName,
@@ -337,6 +337,18 @@ class RegisterComponent extends Component
             Log::info('Login realizado com sucesso para o usuário:', ['user_id' => $user->id]);
 
             if (!$user->hasVerifiedEmail()) {
+                Log::info('User has not verified email, attempting to send verification email', ['user_id' => $user->id, 'email' => $user->email]);
+                try {
+                    $user->sendEmailVerificationNotification();
+                    Log::info('Email de verificação enviado para o usuário:', ['user_id' => $user->id, 'email' => $user->email]);
+                } catch (\Exception $e) {
+                    Log::error('Erro ao enviar email de verificação:', [
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
                 return redirect()->route('verification.notice');
             }
 
@@ -346,8 +358,8 @@ class RegisterComponent extends Component
             session()->flash('error', 'Ocorreu um erro ao criar sua conta. Por favor, tente novamente.');
             return null;
         }
-    }    
-    
+    }
+
     public function debugState()
     {
         Log::info('Estado atual do RegisterComponent:', $this->all());

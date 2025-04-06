@@ -30,10 +30,10 @@
             </form>
 
             <div>
-                <a
+                {{-- <a
                     href="{{ route('profile.show') }}" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ms-2"
                 >
-                    {{ __('Editar Perfil') }}</a>
+                    {{ __('Editar Perfil') }}</a> --}}
 
                 <form method="POST" action="{{ route('logout') }}" class="inline">
                     @csrf
