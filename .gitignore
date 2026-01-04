@@ -20,4 +20,4 @@ deploy.sh
 /gpt
 .prettierrc
 composer-setup.php
-
+/.ssh
