@@ -45,7 +45,7 @@ class SearchSelect extends Component
     {
         if ($this->selectedId && $this->search !== $this->getSelectedName()) {
             // If user modifies the text after selecting an option, clear the selection
-            $this->selectedId = null;
+            $this->clearSelection();
         }
     }
 
@@ -72,10 +72,8 @@ class SearchSelect extends Component
         if (array_key_exists($field, $this->dependsOn)) {
             \Log::info("SearchSelect {$this->field} atualizando dependência {$field} para {$value}");
             $this->dependsOn[$field] = $value;
-            $this->selectedId = null;
-            $this->search = '';
             $this->filterActive = true;
-            $this->dispatch('optionSelected', ['field' => $this->field, 'value' => null]);
+            $this->clearSelection(true);
         } else {
             \Log::warning("SearchSelect {$this->field} recebeu dependencyChanged para campo desconhecido: {$field}");
         }
@@ -109,6 +107,25 @@ class SearchSelect extends Component
             'countries' => 'code',
             default => 'id',
         };
+    }
+
+    public function clearIfUnselected()
+    {
+        // Only blank out the field when no option is selected (e.g., user typed but never chose)
+        if (!$this->selectedId) {
+            $this->clearSelection(true);
+        }
+    }
+
+    private function clearSelection(bool $resetSearch = false)
+    {
+        $this->selectedId = null;
+
+        if ($resetSearch) {
+            $this->search = '';
+        }
+
+        $this->dispatch('optionSelected', ['field' => $this->field, 'value' => null]);
     }
 
     public function render()
