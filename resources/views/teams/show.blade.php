@@ -21,7 +21,11 @@
 
             @livewire('teams.equipment', ['team' => $team])
 
-            {{-- @livewire('teams.team-member-manager', ['team' => $team]) --}}
+            @livewire('teams.team-member-manager', ['team' => $team])
+
+            <x-section-border />
+
+            @livewire('teams.legacy-info', ['team' => $team])
 
             {{-- @if (Gate::check('delete', $team) && ! $team->personal_team)
                 <x-section-border />

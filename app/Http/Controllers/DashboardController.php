@@ -49,7 +49,11 @@ class DashboardController extends Controller
         // Adicionar limites e paginação para evitar timeout
         $posts = $query->limit(20)->get();
 
-        return view('dashboard', compact('posts', 'tags', 'selectedTags', 'tagColors'));
+        $memberLabs = auth()->check()
+            ? auth()->user()->allTeams()->map(fn($team) => ['id' => $team->id, 'name' => $team->name])->values()
+            : collect();
+
+        return view('dashboard', compact('posts', 'tags', 'selectedTags', 'tagColors', 'memberLabs'));
     }
 
     /**
@@ -132,6 +136,10 @@ class DashboardController extends Controller
         // Para requisições normais, retornar a view
         $posts = $query->limit(20)->get();
 
-        return view('dashboard', compact('posts', 'tags', 'selectedTags', 'tagColors'));
+        $memberLabs = auth()->check()
+            ? auth()->user()->allTeams()->map(fn($team) => ['id' => $team->id, 'name' => $team->name])->values()
+            : collect();
+
+        return view('dashboard', compact('posts', 'tags', 'selectedTags', 'tagColors', 'memberLabs'));
     }
 }

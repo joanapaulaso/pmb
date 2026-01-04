@@ -9,6 +9,9 @@ use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\LabsMapController;
 use App\Http\Controllers\EquipmentMapController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\LabClaimController;
+use App\Http\Controllers\LabMemberRequestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LabCoordinatorController;
 use App\Http\Controllers\PortalController;
@@ -31,6 +34,10 @@ Route::get('/lab-coordinator/approve/{token}', [LabCoordinatorController::class,
     ->name('lab-coordinator.approve');
 Route::get('/lab-coordinator/reject/{token}', [LabCoordinatorController::class, 'reject'])
     ->name('lab-coordinator.reject');
+Route::get('/lab-claims/approve/{token}', [LabClaimController::class, 'approve'])->name('lab-claims.approve');
+Route::get('/lab-claims/reject/{token}', [LabClaimController::class, 'reject'])->name('lab-claims.reject');
+Route::get('/lab-members/approve/{token}', [LabMemberRequestController::class, 'approve'])->name('lab-members.approve');
+Route::get('/lab-members/reject/{token}', [LabMemberRequestController::class, 'reject'])->name('lab-members.reject');
 
 // Rotas para vídeos e eventos (públicas)
 Route::prefix('videos')->name('videos.')->group(function () {
@@ -96,6 +103,8 @@ Route::middleware($authMiddleware)->group(function () {
 
     // Grupo de rotas para Times/Equipes
     Route::controller(TeamController::class)->group(function () {
+        // Redireciona /teams/{team} para a visão pública do laboratório
+        Route::get('/teams/{team}', 'public')->name('teams.public');
         Route::get('/teams/{team}/settings', 'show')->name('teams.show');
     });
 
@@ -103,6 +112,8 @@ Route::middleware($authMiddleware)->group(function () {
     Route::controller(LabsMapController::class)->prefix('labs')->name('labs.')->group(function () {
         Route::get('/map', 'index')->name('map');
     });
+    Route::post('/labs/{team}/claim', [LabClaimController::class, 'store'])->name('labs.claim');
+    Route::post('/labs/{team}/member-request', [LabMemberRequestController::class, 'store'])->name('labs.member-request');
 
     // Rota de API para dados dos laboratórios
     Route::get('/api/labs', [LabsMapController::class, 'getLabsData'])->name('api.labs');
@@ -110,6 +121,10 @@ Route::middleware($authMiddleware)->group(function () {
 
     // Mapa de Equipamentos (catálogo)
     Route::get('/equipments/map', [EquipmentMapController::class, 'index'])->name('equipments.map');
+
+    // Mensagens entre usuários
+    Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
+    Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
 
     Route::post('/upload-image', [App\Http\Controllers\ImageUploadController::class, 'upload'])
         ->middleware(['auth'])

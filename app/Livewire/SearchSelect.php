@@ -8,6 +8,8 @@ use App\Models\State;
 use App\Models\Municipality;
 use App\Models\Institution;
 use App\Models\Laboratory;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class SearchSelect extends Component
 {
@@ -18,6 +20,7 @@ class SearchSelect extends Component
     public $selectedId;
     public $placeholder;
     public $initialValue;
+    public $excludeCurrentUser = false;
 
     // Flag adicional para controle de filtro
     public $filterActive = true;
@@ -25,7 +28,7 @@ class SearchSelect extends Component
     // Livewire lifecycle hooks
     protected $listeners = ['dependencyChanged'];
 
-    public function mount($model, $field, $dependsOn = [], $placeholder = '', $initialValue = null)
+    public function mount($model, $field, $dependsOn = [], $placeholder = '', $initialValue = null, $excludeCurrentUser = false)
     {
         $this->model = $model;
         $this->field = $field;
@@ -33,6 +36,7 @@ class SearchSelect extends Component
         $this->placeholder = $placeholder;
         $this->selectedId = $initialValue;
         $this->initialValue = $initialValue;
+        $this->excludeCurrentUser = $excludeCurrentUser;
 
         $this->search = $this->selectedId ? $this->getSelectedName() : '';
 
@@ -97,6 +101,7 @@ class SearchSelect extends Component
             'countries' => Country::class,
             'institutions' => Institution::class,
             'laboratories' => Laboratory::class,
+            'users' => User::class,
             default => throw new \Exception("Modelo inválido: {$this->model}"),
         };
     }
@@ -146,6 +151,10 @@ class SearchSelect extends Component
                     \Log::info("SearchSelect {$this->field} skipping filter for {$key} due to null/empty value");
                 }
             }
+        }
+
+        if ($this->model === 'users' && $this->excludeCurrentUser && Auth::check()) {
+            $query->where('id', '!=', Auth::id());
         }
 
         // Search results are only shown when:

@@ -138,7 +138,7 @@
                                        @if (request()->query('lab_filter', 'false') === 'true') checked @endif>
                                 <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-300 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-300 peer-checked:bg-indigo-600 dark:peer-checked:bg-indigo-600"></div>
                                 <span class="text-sm font-medium text-gray-600 peer-checked:text-indigo-600 transition-colors duration-300">
-                                    Ver apenas publicações de membros
+                                    Ver apenas publicações atribuídas a este laboratório
                                 </span>
                             </label>
                         </div>

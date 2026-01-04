@@ -112,6 +112,48 @@
                         </p>
                     </div>
                 </div>
+
+                @php
+                    $coordinatedTeams = auth()->check()
+                        ? auth()->user()->teams->filter(function($team){ return ($team->pivot->role ?? null) === 'admin'; })
+                        : collect();
+                @endphp
+
+                @if($coordinatedTeams->count() > 0)
+                    <div class="mt-4">
+                        <p class="text-sm text-gray-500">{{ __('Laboratórios que coordeno') }}</p>
+                        <ul class="mt-2 space-y-2">
+                            @foreach($coordinatedTeams as $team)
+                                <li class="text-base font-medium text-gray-900">
+                                    <a href="{{ route('teams.show', $team->id) }}" class="text-indigo-600 hover:text-indigo-800">
+                                        {{ $team->name }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                @php
+                    $memberTeams = auth()->check()
+                        ? auth()->user()->teams->filter(function($team){ return ($team->pivot->role ?? null) !== 'admin'; })
+                        : collect();
+                @endphp
+
+                @if($memberTeams->count() > 0)
+                    <div class="mt-4">
+                        <p class="text-sm text-gray-500">{{ __('Laboratórios que participo') }}</p>
+                        <ul class="mt-2 space-y-2">
+                            @foreach($memberTeams as $team)
+                                <li class="text-base font-medium text-gray-900">
+                                    <a href="{{ route('teams.show', $team->id) }}" class="text-indigo-600 hover:text-indigo-800">
+                                        {{ $team->name }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
             </div>
 
             <!-- Categorias de Interesse -->

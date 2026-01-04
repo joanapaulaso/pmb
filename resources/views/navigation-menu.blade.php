@@ -16,6 +16,19 @@
                     <x-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')" class="text-gray-700 hover:text-gray-900 transition-colors">
                         {{ __('Comunidade') }}
                     </x-nav-link>
+                    @php
+                        $unreadMessages = Auth::check()
+                            ? \App\Models\Message::where('recipient_id', Auth::id())->whereNull('read_at')->count()
+                            : 0;
+                    @endphp
+                    <x-nav-link href="{{ route('messages.index') }}" :active="request()->routeIs('messages.*')" class="text-gray-700 hover:text-gray-900 transition-colors relative">
+                        {{ __('Mensagens') }}
+                        @if($unreadMessages > 0)
+                            <span class="ml-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold leading-none text-white bg-red-600 rounded-full">
+                                {{ $unreadMessages }}
+                            </span>
+                        @endif
+                    </x-nav-link>
 
                     <!-- Recursos Dropdown -->
                     <x-dropdown align="left" width="48">
@@ -53,14 +66,21 @@
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
                 <!-- Teams Dropdown -->
-                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures() && Auth::check() && Auth::user()->profile->lab_coordinator)
+                @if (Laravel\Jetstream\Jetstream::hasTeamFeatures() && Auth::check())
+                    @php
+                        $adminTeams = Auth::user()->teams->filter(function($team){
+                            return optional($team->membership)->role === 'admin';
+                        });
+                        $ownedTeams = Auth::user()->ownedTeams ?? collect();
+                        $allManagedTeams = $adminTeams->merge($ownedTeams)->unique('id');
+                    @endphp
                     <div class="ms-3 relative">
-                        @if(Auth::user()->allTeams()->count() > 0)
+                        @if(Auth::user()->profile->lab_coordinator && $allManagedTeams->count() > 0)
                             <x-dropdown align="right" width="60">
                                 <x-slot name="trigger">
                                     <span class="inline-flex rounded">
                                         <button type="button" class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition-colors">
-                                            {{ Auth::user()->currentTeam ? Auth::user()->currentTeam->name : __('Team Space') }}
+                                            {{ Auth::user()->currentTeam ? Auth::user()->currentTeam->name : __('Laboratórios') }}
                                             <svg class="ms-2 -me-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
                                             </svg>
@@ -70,34 +90,14 @@
 
                                 <x-slot name="content">
                                     <div class="w-60">
-                                        <!-- Team Management -->
                                         <div class="block px-4 py-2 text-xs text-gray-400">
                                             {{ __('Administrar Laboratório') }}
                                         </div>
-
-                                        @if(Auth::user()->currentTeam)
-                                            <!-- Team Settings -->
-                                            <x-dropdown-link href="{{ route('teams.show', Auth::user()->currentTeam->id) }}" class="text-gray-700 hover:bg-gray-100 transition-colors">
-                                                {{ __('Meu Laboratório') }}
+                                        @foreach($allManagedTeams as $team)
+                                            <x-dropdown-link href="{{ route('teams.show', $team->id) }}" class="text-gray-700 hover:bg-gray-100 transition-colors">
+                                                {{ $team->name }}
                                             </x-dropdown-link>
-                                        @endif
-
-                                        {{-- @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
-                                            <x-dropdown-link href="{{ route('teams.create') }}" class="text-gray-700 hover:bg-gray-100 transition-colors">
-                                                {{ __('Create New Team') }}
-                                            </x-dropdown-link>
-                                        @endcan --}}
-
-                                        <!-- Team Switcher -->
-                                        {{-- @if (Auth::user()->allTeams()->count() > 1)
-                                            <div class="border-t border-gray-200"></div>
-                                            <div class="block px-4 py-2 text-xs text-gray-400">
-                                                {{ __('Switch Teams') }}
-                                            </div>
-                                            @foreach (Auth::user()->allTeams() as $team)
-                                                <x-switchable-team :team="$team" />
-                                            @endforeach
-                                        @endif --}}
+                                        @endforeach
                                     </div>
                                 </x-slot>
                             </x-dropdown>
@@ -195,6 +195,14 @@
             <x-responsive-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')" class="text-gray-700 hover:bg-gray-100 transition-colors">
                 {{ __('Comunidade') }}
             </x-responsive-nav-link>
+            <x-responsive-nav-link href="{{ route('messages.index') }}" :active="request()->routeIs('messages.*')" class="text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-between">
+                <span>{{ __('Mensagens') }}</span>
+                @if(isset($unreadMessages) && $unreadMessages > 0)
+                    <span class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold leading-none text-white bg-red-600 rounded-full">
+                        {{ $unreadMessages }}
+                    </span>
+                @endif
+            </x-responsive-nav-link>
             <!-- Recursos no Menu Mobile -->
             <div class="border-t border-gray-200"></div>
             <div class="block px-4 py-2 text-xs text-gray-400">
@@ -242,6 +250,20 @@
                     <x-responsive-nav-link href="{{ route('admin.dashboard') }}" :active="request()->routeIs('admin.dashboard')" class="text-gray-700 hover:bg-gray-100 transition-colors">
                         {{ __('Painel Admin') }}
                     </x-responsive-nav-link>
+                @endif
+
+                @php
+                    $responsiveManagedTeams = $allManagedTeams ?? collect();
+                @endphp
+                @if($responsiveManagedTeams->count() > 0)
+                    <div class="block px-4 py-2 text-xs text-gray-400">
+                        {{ __('Laboratórios que coordeno') }}
+                    </div>
+                    @foreach($responsiveManagedTeams as $team)
+                        <x-responsive-nav-link href="{{ route('teams.show', $team->id) }}" class="text-gray-700 hover:bg-gray-100 transition-colors">
+                            {{ $team->name }}
+                        </x-responsive-nav-link>
+                    @endforeach
                 @endif
 
                 @if (Laravel\Jetstream\Jetstream::hasApiFeatures())

@@ -39,7 +39,7 @@ class TeamPolicy
      */
     public function update(User $user, Team $team): bool
     {
-        return $user->ownsTeam($team);
+        return $user->ownsTeam($team) || $user->hasTeamRole($team, 'admin');
     }
 
     /**
@@ -47,7 +47,7 @@ class TeamPolicy
      */
     public function addTeamMember(User $user, Team $team): bool
     {
-        return $user->ownsTeam($team);
+        return $user->ownsTeam($team) || $user->hasTeamRole($team, 'admin');
     }
 
     /**
@@ -55,7 +55,7 @@ class TeamPolicy
      */
     public function updateTeamMember(User $user, Team $team): bool
     {
-        return $user->ownsTeam($team);
+        return $user->ownsTeam($team) || $user->hasTeamRole($team, 'admin');
     }
 
     /**
@@ -63,7 +63,7 @@ class TeamPolicy
      */
     public function removeTeamMember(User $user, Team $team): bool
     {
-        return $user->ownsTeam($team);
+        return $user->ownsTeam($team) || $user->hasTeamRole($team, 'admin');
     }
 
     /**
@@ -71,14 +71,14 @@ class TeamPolicy
      */
     public function delete(User $user, Team $team): bool
     {
-        return $user->ownsTeam($team);
+        return $user->ownsTeam($team) || $user->hasTeamRole($team, 'admin');
     }
 
     // Apenas o coordenador pode atualizar o endereço
     public function updateAddress(User $user, Team $team)
     {
         // Verifica se o usuário é o dono do time (coordenador)
-        return $team->user_id === $user->id;
+        return $team->user_id === $user->id || $user->hasTeamRole($team, 'admin');
     }
 
     // Qualquer usuário autenticado pode visualizar o endereço
@@ -95,7 +95,7 @@ class TeamPolicy
 
     public function updateEquipment(User $user, Team $team)
     {
-        return $user->ownsTeam($team); // Apenas o dono (coordenador) pode atualizar
+        return $user->ownsTeam($team) || $user->hasTeamRole($team, 'admin'); // Coordenador ou admin do lab
     }
 
 }

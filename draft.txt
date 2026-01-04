@@ -6,6 +6,9 @@ sail php artisan optimize:clear
 sail php artisan clear-compiled
 
 
+./vendor/bin/sail artisan labs:import-legacy
+
+
 /opt/cloudlinux/alt-php83/root/usr/bin/php artisan config:clear
 /opt/cloudlinux/alt-php83/root/usr/bin/php artisan cache:clear
 /opt/cloudlinux/alt-php83/root/usr/bin/php artisan view:clear
@@ -14,6 +17,7 @@ sail php artisan clear-compiled
 
 /opt/cloudlinux/alt-php83/root/usr/bin/php artisan migrate
 /opt/cloudlinux/alt-php83/root/usr/bin/php artisan import:data
+
 
 sail php artisan route:list | grep register
 sail php artisan import:data

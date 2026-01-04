@@ -28,8 +28,10 @@ class AddTeamMember implements AddsTeamMembers
 
         AddingTeamMember::dispatch($team, $newTeamMember);
 
+        $roleToAssign = $role ?? 'member';
+
         $team->users()->attach(
-            $newTeamMember, ['role' => $role]
+            $newTeamMember, ['role' => $roleToAssign]
         );
 
         TeamMemberAdded::dispatch($team, $newTeamMember);

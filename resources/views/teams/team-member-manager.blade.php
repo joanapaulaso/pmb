@@ -6,23 +6,23 @@
         <div class="mt-10 sm:mt-0">
             <x-form-section submit="addTeamMember">
                 <x-slot name="title">
-                    {{ __('Add Team Member') }}
+                    {{ __('Adicionar membro ao laboratório') }}
                 </x-slot>
 
                 <x-slot name="description">
-                    {{ __('Add a new team member to your team, allowing them to collaborate with you.') }}
+                    {{ __('Inclua um novo membro no laboratório para colaborar com você.') }}
                 </x-slot>
 
                 <x-slot name="form">
                     <div class="col-span-6">
                         <div class="max-w-xl text-sm text-gray-600">
-                            {{ __('Please provide the email address of the person you would like to add to this team.') }}
+                            {{ __('Informe o e-mail da pessoa que você deseja adicionar ao laboratório.') }}
                         </div>
                     </div>
 
                     <!-- Member Email -->
                     <div class="col-span-6 sm:col-span-4">
-                        <x-label for="email" value="{{ __('Email') }}" />
+                        <x-label for="email" value="{{ __('E-mail') }}" />
                         <x-input id="email" type="email" class="mt-1 block w-full" wire:model="addTeamMemberForm.email" />
                         <x-input-error for="email" class="mt-2" />
                     </div>
@@ -30,7 +30,7 @@
                     <!-- Role -->
                     @if (count($this->roles) > 0)
                         <div class="col-span-6 lg:col-span-4">
-                            <x-label for="role" value="{{ __('Role') }}" />
+                            <x-label for="role" value="{{ __('Função') }}" />
                             <x-input-error for="role" class="mt-2" />
 
                             <div class="relative z-0 mt-1 border border-gray-200 rounded-lg cursor-pointer">
@@ -65,11 +65,11 @@
 
                 <x-slot name="actions">
                     <x-action-message class="me-3" on="saved">
-                        {{ __('Added.') }}
+                        {{ __('Adicionado.') }}
                     </x-action-message>
 
                     <x-button>
-                        {{ __('Add') }}
+                        {{ __('Adicionar') }}
                     </x-button>
                 </x-slot>
             </x-form-section>
@@ -83,11 +83,11 @@
         <div class="mt-10 sm:mt-0">
             <x-action-section>
                 <x-slot name="title">
-                    {{ __('Pending Team Invitations') }}
+                    {{ __('Convites pendentes') }}
                 </x-slot>
 
                 <x-slot name="description">
-                    {{ __('These people have been invited to your team and have been sent an invitation email. They may join the team by accepting the email invitation.') }}
+                    {{ __('Essas pessoas foram convidadas e receberam um e-mail. Elas entram ao aceitar o convite.') }}
                 </x-slot>
 
                 <x-slot name="content">
@@ -101,7 +101,7 @@
                                         <!-- Cancel Team Invitation -->
                                         <button class="cursor-pointer ms-6 text-sm text-red-500 focus:outline-none"
                                                             wire:click="cancelTeamInvitation({{ $invitation->id }})">
-                                            {{ __('Cancel') }}
+                                            {{ __('Cancelar') }}
                                         </button>
                                     @endif
                                 </div>
@@ -120,11 +120,11 @@
         <div class="mt-10 sm:mt-0">
             <x-action-section>
                 <x-slot name="title">
-                    {{ __('Team Members') }}
+                    {{ __('Membros do laboratório') }}
                 </x-slot>
 
                 <x-slot name="description">
-                    {{ __('All of the people that are part of this team.') }}
+                    {{ __('Lista de pessoas que fazem parte do laboratório.') }}
                 </x-slot>
 
                 <!-- Team Member List -->
@@ -138,27 +138,32 @@
                                 </div>
 
                                 <div class="flex items-center">
+                                    @php
+                                        $roleKey = optional($user->teamRole($team))->key ?? optional($user->membership)->role ?? 'member';
+                                        $roleObj = Laravel\Jetstream\Jetstream::findRole($roleKey);
+                                        $roleName = $roleObj ? $roleObj->name : ucfirst($roleKey);
+                                    @endphp
                                     <!-- Manage Team Member Role -->
                                     @if (Gate::check('updateTeamMember', $team) && Laravel\Jetstream\Jetstream::hasRoles())
                                         <button class="ms-2 text-sm text-gray-400 underline" wire:click="manageRole('{{ $user->id }}')">
-                                            {{ Laravel\Jetstream\Jetstream::findRole($user->membership->role)->name }}
+                                            {{ $roleName }}
                                         </button>
                                     @elseif (Laravel\Jetstream\Jetstream::hasRoles())
                                         <div class="ms-2 text-sm text-gray-400">
-                                            {{ Laravel\Jetstream\Jetstream::findRole($user->membership->role)->name }}
+                                            {{ $roleName }}
                                         </div>
                                     @endif
 
                                     <!-- Leave Team -->
                                     @if ($this->user->id === $user->id)
                                         <button class="cursor-pointer ms-6 text-sm text-red-500" wire:click="$toggle('confirmingLeavingTeam')">
-                                            {{ __('Leave') }}
+                                            {{ __('Sair') }}
                                         </button>
 
                                     <!-- Remove Team Member -->
                                     @elseif (Gate::check('removeTeamMember', $team))
                                         <button class="cursor-pointer ms-6 text-sm text-red-500" wire:click="confirmTeamMemberRemoval('{{ $user->id }}')">
-                                            {{ __('Remove') }}
+                                            {{ __('Remover') }}
                                         </button>
                                     @endif
                                 </div>
@@ -173,7 +178,7 @@
     <!-- Role Management Modal -->
     <x-dialog-modal wire:model.live="currentlyManagingRole">
         <x-slot name="title">
-            {{ __('Manage Role') }}
+            {{ __('Gerenciar função') }}
         </x-slot>
 
         <x-slot name="content">
@@ -207,11 +212,11 @@
 
         <x-slot name="footer">
             <x-secondary-button wire:click="stopManagingRole" wire:loading.attr="disabled">
-                {{ __('Cancel') }}
+                {{ __('Cancelar') }}
             </x-secondary-button>
 
             <x-button class="ms-3" wire:click="updateRole" wire:loading.attr="disabled">
-                {{ __('Save') }}
+                {{ __('Salvar') }}
             </x-button>
         </x-slot>
     </x-dialog-modal>

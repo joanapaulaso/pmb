@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Team;
 use App\Models\Post;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -17,25 +18,31 @@ class LabsMapController extends Controller
     {
         Log::info('Iniciando busca de laboratórios para o mapa');
 
-        $totalLabs = Team::count();
+        $totalLabs = Team::where('personal_team', false)->count();
         Log::info('Total de laboratórios no sistema: ' . $totalLabs);
 
-        $labsWithCoordinates = Team::whereNotNull('latitude')
+        $labsWithCoordinates = Team::where('personal_team', false)
+            ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->count();
         Log::info('Laboratórios com alguma coordenada: ' . $labsWithCoordinates);
 
-        $labsWithValidCoords = Team::whereNotNull('latitude')
+        $labsWithValidCoords = Team::where('personal_team', false)
+            ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->where('latitude', '!=', 0)
             ->where('longitude', '!=', 0)
             ->count();
         Log::info('Laboratórios com coordenadas válidas (não-zero): ' . $labsWithValidCoords);
 
-        $labs = Team::whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->where('latitude', '!=', 0)
-            ->where('longitude', '!=', 0)
+        $labs = Team::where('personal_team', false)
+            ->where(function ($q) {
+                $q->whereNotNull('latitude')
+                    ->whereNotNull('longitude')
+                    ->where('latitude', '!=', 0)
+                    ->where('longitude', '!=', 0)
+                    ->orWhereNotNull('address');
+            })
             ->get();
 
         Log::info('Laboratórios encontrados: ' . $labs->count());
@@ -45,6 +52,11 @@ class LabsMapController extends Controller
         }
 
         $formattedLabs = $labs->map(function ($lab) {
+            $currentUser = Auth::user();
+            $isMember = false;
+            if ($currentUser) {
+                $isMember = $lab->users->contains($currentUser->id);
+            }
             return [
                 'id' => $lab->id,
                 'name' => $lab->name,
@@ -64,8 +76,15 @@ class LabsMapController extends Controller
                     'contact_email' => $lab->contact_email,
                     'website' => $lab->website,
                     'working_hours' => $lab->working_hours,
-                    'has_accessibility' => $lab->has_accessibility
-                ]
+                    'has_accessibility' => $lab->has_accessibility,
+                    'researchers' => $lab->researchers,
+                    'analytical_techniques' => $lab->analytical_techniques,
+                    'research_lines' => $lab->research_lines,
+                ],
+                'is_legacy' => (bool) $lab->is_legacy,
+                'is_claimed' => (bool) $lab->is_claimed,
+                'legacy_source_id' => $lab->legacy_source_id,
+                'is_member' => $isMember,
             ];
         });
 
@@ -79,10 +98,14 @@ class LabsMapController extends Controller
      */
     public function getLabsData()
     {
-        $labs = Team::whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->where('latitude', '!=', 0)
-            ->where('longitude', '!=', 0)
+        $labs = Team::where('personal_team', false)
+            ->where(function ($q) {
+                $q->whereNotNull('latitude')
+                    ->whereNotNull('longitude')
+                    ->where('latitude', '!=', 0)
+                    ->where('longitude', '!=', 0)
+                    ->orWhereNotNull('address');
+            })
             ->get()
             ->map(function ($lab) {
                 return [
@@ -104,8 +127,14 @@ class LabsMapController extends Controller
                         'contact_email' => $lab->contact_email,
                         'website' => $lab->website,
                         'working_hours' => $lab->working_hours,
-                        'has_accessibility' => $lab->has_accessibility
-                    ]
+                        'has_accessibility' => $lab->has_accessibility,
+                        'researchers' => $lab->researchers,
+                        'analytical_techniques' => $lab->analytical_techniques,
+                        'research_lines' => $lab->research_lines,
+                    ],
+                    'is_legacy' => (bool) $lab->is_legacy,
+                    'is_claimed' => (bool) $lab->is_claimed,
+                    'legacy_source_id' => $lab->legacy_source_id,
                 ];
             });
 
@@ -141,7 +170,15 @@ class LabsMapController extends Controller
 
         $labFilter = $request->input('lab_filter', 'false') === 'true';
         if ($labFilter) {
-            $query->where('is_lab_publication', true);
+            $query->where(function ($q) {
+                $q->where('tag', 'publicação')
+                    ->orWhereJsonContains('additional_tags', 'publicação');
+            });
+            $query->where('is_lab_publication', true)
+                ->where(function ($q) use ($lab) {
+                    $q->where('metadata->lab->id', $lab->id)
+                        ->orWhere('metadata->lab_id', $lab->id);
+                });
         }
 
         $posts = $query->paginate(20);

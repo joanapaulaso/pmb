@@ -19,6 +19,7 @@ class Team extends JetstreamTeam
      */
     protected $fillable = [
         'name',
+        'user_id',
         'personal_team',
         'description',
         'address',
@@ -45,6 +46,13 @@ class Team extends JetstreamTeam
         // Campos adicionais
         'department',
         'campus',
+        // Legacy import metadata
+        'legacy_source_id',
+        'is_legacy',
+        'is_claimed',
+        'researchers',
+        'analytical_techniques',
+        'research_lines',
     ];
 
     /**
@@ -70,6 +78,8 @@ class Team extends JetstreamTeam
             'has_accessibility' => 'boolean',
             'latitude' => 'float',
             'longitude' => 'float',
+            'is_legacy' => 'boolean',
+            'is_claimed' => 'boolean',
         ];
     }
 
@@ -78,7 +88,10 @@ class Team extends JetstreamTeam
      */
     public function users()
     {
-        return $this->belongsToMany(User::class, 'team_user')->withPivot('role')->withTimestamps();
+        return $this->belongsToMany(User::class, 'team_user')
+            ->withPivot('role')
+            ->withTimestamps()
+            ->as('membership');
     }
 
     /**

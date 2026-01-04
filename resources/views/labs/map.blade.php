@@ -85,10 +85,35 @@
                             </div>
                         </div>
 
-                        <div class="mt-4 flex space-x-4">
+                        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-sm font-semibold mb-1">Pesquisadores</h4>
+                                <p id="lab-detail-researchers" class="text-sm text-gray-700"></p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold mb-1">Técnicas Analíticas</h4>
+                                <p id="lab-detail-techniques" class="text-sm text-gray-700"></p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <h4 class="text-sm font-semibold mb-1">Linhas de Pesquisa</h4>
+                            <p id="lab-detail-lines" class="text-sm text-gray-700"></p>
+                        </div>
+
+                        <div class="mt-4 flex flex-wrap items-center gap-3">
                             <a href="#" id="lab-detail-website" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm hidden">Visitar website</a>
                             <a href="#" id="lab-detail-directions" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm hidden">Como chegar</a>
                             <a href="#" id="lab-detail-view" class="text-indigo-600 hover:text-indigo-800 text-sm">Ver perfil completo</a>
+                            <form id="lab-claim-form" method="POST" class="hidden">
+                                @csrf
+                                <button type="submit" class="text-sm text-indigo-600 hover:text-indigo-800">Reivindicar coordenação</button>
+                            </form>
+                            <a href="{{ route('login') }}" id="lab-claim-login" class="text-sm text-indigo-600 hover:text-indigo-800 hidden">Entrar para reivindicar</a>
+                            <form id="lab-member-request-form" method="POST" class="hidden">
+                                @csrf
+                                <button type="submit" class="text-sm text-indigo-600 hover:text-indigo-800">Quero ser membro</button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -102,10 +127,12 @@
         let map;
         let markers = [];
         let infoWindow;
+        let geocoder;
+        const geocodeCache = {};
         let labs = @json($formattedLabs ?? []);
 
         // Debug - verificar dados recebidos
-        console.log('Dados de laboratórios recebidos:', labs);
+        console.log('Dados de laboratórios recebidos (labs array):', labs);
 
         // Filtros
         let departments = new Set();
@@ -124,6 +151,7 @@
                 // console.log('Componente gmp-map definido');
 
                 map = document.getElementById('labs-map');
+                geocoder = new google.maps.Geocoder();
 
                 if (!map) {
                     console.error('Elemento do mapa não encontrado');
@@ -174,7 +202,7 @@
                 initFilters();
 
                 // Inicializar marcadores - isso vai mostrar todos os laboratórios no mapa
-                createMarkers();
+                await createMarkers();
 
                 // Inicializar lista de laboratórios
                 updateLabsList();
@@ -189,7 +217,7 @@
         }
 
         // Criar marcadores para cada laboratório
-        function createMarkers() {
+        async function createMarkers() {
             try {
                 console.log('Criando marcadores para', labs.length, 'laboratórios');
 
@@ -204,13 +232,19 @@
                 const bounds = new google.maps.LatLngBounds();
                 let markersCreated = 0;
 
-                filteredLabs.forEach(lab => {
+                for (const lab of filteredLabs) {
                     console.log('Criando marcador para:', lab.name, 'nas coordenadas:', lab.coordinates);
+
+                    const coords = await resolveCoordinates(lab);
+                    if (!coords) {
+                        console.warn('Coordenadas ausentes para', lab.name);
+                        continue;
+                    }
 
                     try {
                         // Usar o marcador padrão em vez do AdvancedMarkerElement
                         const marker = new google.maps.Marker({
-                            position: lab.coordinates,
+                            position: coords,
                             map: map.innerMap,
                             title: lab.name,
                             // Ícone personalizado opcional
@@ -252,13 +286,14 @@
                         markersCreated++;
 
                         // Expandir os limites do mapa
-                        bounds.extend(lab.coordinates);
+                            bounds.extend(lab.coordinates);
+                            bounds.extend(coords);
 
-                        console.log('Marcador criado com sucesso');
-                    } catch (markerError) {
-                        console.error('Erro ao criar marcador:', markerError, 'para laboratório:', lab);
-                    }
-                });
+                            console.log('Marcador criado com sucesso');
+                        } catch (markerError) {
+                            console.error('Erro ao criar marcador:', markerError, 'para laboratório:', lab);
+                        }
+                }
 
                 console.log(`${markersCreated} marcadores criados com sucesso`);
 
@@ -298,6 +333,7 @@
         function showLabDetails(lab) {
             try {
                 const detailContainer = document.getElementById('lab-details');
+                console.log('Exibindo detalhes para lab:', lab);
 
                 // Preencher os detalhes
                 document.getElementById('lab-detail-name').textContent = lab.name;
@@ -310,16 +346,32 @@
                 if (lab.details.room) locationText += `Sala: ${lab.details.room}<br>`;
                 if (lab.details.department) locationText += `Departamento: ${lab.details.department}<br>`;
                 if (lab.details.campus) locationText += `Campus: ${lab.details.campus}`;
+                if (!locationText && lab.address) {
+                    locationText = lab.address;
+                }
                 document.getElementById('lab-detail-location').innerHTML = locationText || 'Informações não disponíveis';
+                console.log('Localização resolvida:', locationText);
 
                 // Contato
                 let contactText = '';
                 if (lab.details.phone) contactText += `Telefone: ${lab.details.phone}<br>`;
-                if (lab.details.contact_email) contactText += `Email: ${lab.details.contact_email}`;
+                if (lab.details.contact_email) contactText += `Email: ${lab.details.contact_email}<br>`;
+                if (lab.details.website) contactText += `Site: ${lab.details.website}`;
                 document.getElementById('lab-detail-contact').innerHTML = contactText || 'Informações não disponíveis';
+                console.log('Contato resolvido:', contactText);
 
                 // Horário
                 document.getElementById('lab-detail-hours').textContent = lab.details.working_hours || 'Não informado';
+                console.log('Horário:', lab.details.working_hours);
+
+                // Campos legados
+                const researchersVal = lab.details.researchers || lab.researchers || 'Não informado';
+                const techniquesVal = lab.details.analytical_techniques || lab.analytical_techniques || 'Não informado';
+                const linesVal = lab.details.research_lines || lab.research_lines || 'Não informado';
+                document.getElementById('lab-detail-researchers').textContent = researchersVal;
+                document.getElementById('lab-detail-techniques').textContent = techniquesVal;
+                document.getElementById('lab-detail-lines').textContent = linesVal;
+                console.log('Campos legados -> Pesquisadores:', researchersVal, 'Técnicas:', techniquesVal, 'Linhas:', linesVal);
 
                 // Links
                 const websiteLink = document.getElementById('lab-detail-website');
@@ -343,6 +395,50 @@
                 // Link para perfil completo
                 document.getElementById('lab-detail-view').href = `/teams/${lab.id}`;
 
+                // Reivindicação
+                const claimForm = document.getElementById('lab-claim-form');
+                const claimLogin = document.getElementById('lab-claim-login');
+                const memberForm = document.getElementById('lab-member-request-form');
+                const isMember = lab.is_member || false;
+                const isClaimed = !!lab.is_claimed;
+                console.log('Claim check -> is_claimed:', lab.is_claimed, 'is_legacy:', lab.is_legacy, 'legacy_source_id:', lab.legacy_source_id);
+                @if(Auth::check())
+                if (claimForm) {
+                    if (!isClaimed) {
+                        claimForm.action = `/labs/${lab.id}/claim`;
+                        claimForm.classList.remove('hidden');
+                    } else {
+                        claimForm.classList.add('hidden');
+                    }
+                }
+                if (claimLogin) {
+                    claimLogin.classList.add('hidden');
+                }
+                if (memberForm) {
+                    if (!isMember) {
+                        memberForm.action = `/labs/${lab.id}/member-request`;
+                        memberForm.classList.remove('hidden');
+                    } else {
+                        memberForm.classList.add('hidden');
+                    }
+                }
+                @else
+                if (claimForm) {
+                    claimForm.classList.add('hidden');
+                }
+                if (claimLogin) {
+                    if (!isClaimed) {
+                        claimLogin.href = "{{ route('login') }}";
+                        claimLogin.classList.remove('hidden');
+                    } else {
+                        claimLogin.classList.add('hidden');
+                    }
+                }
+                if (memberForm) {
+                    memberForm.classList.add('hidden');
+                }
+                @endif
+
                 // Mostrar o container
                 detailContainer.classList.remove('hidden');
 
@@ -355,6 +451,35 @@
             } catch (error) {
                 console.error('Erro ao mostrar detalhes do laboratório:', error);
             }
+        }
+
+        async function resolveCoordinates(lab) {
+            if (lab.coordinates && lab.coordinates.lat && lab.coordinates.lng) {
+                return lab.coordinates;
+            }
+
+            if (geocodeCache[lab.id]) {
+                return geocodeCache[lab.id];
+            }
+
+            if (!geocoder || !lab.address) {
+                return null;
+            }
+
+            return new Promise(resolve => {
+                geocoder.geocode({ address: lab.address }, (results, status) => {
+                    if (status === 'OK' && results[0]) {
+                        const location = results[0].geometry.location;
+                        const coords = { lat: location.lat(), lng: location.lng() };
+                        lab.coordinates = coords;
+                        geocodeCache[lab.id] = coords;
+                        resolve(coords);
+                    } else {
+                        console.warn('Geocode falhou para', lab.name, status);
+                        resolve(null);
+                    }
+                });
+            });
         }
 
 
@@ -487,64 +612,6 @@
                 });
             } catch (error) {
                 console.error('Erro ao atualizar lista de laboratórios:', error);
-            }
-        }
-
-        // Mostrar detalhes do laboratório selecionado
-        function showLabDetails(lab) {
-            try {
-                const detailContainer = document.getElementById('lab-details');
-
-                // Preencher os detalhes
-                document.getElementById('lab-detail-name').textContent = lab.name;
-                document.getElementById('lab-detail-address').textContent = lab.address || 'Endereço não informado';
-
-                // Localização
-                let locationText = '';
-                if (lab.details.building) locationText += `Prédio: ${lab.details.building}<br>`;
-                if (lab.details.floor) locationText += `Andar: ${lab.details.floor}<br>`;
-                if (lab.details.room) locationText += `Sala: ${lab.details.room}<br>`;
-                if (lab.details.department) locationText += `Departamento: ${lab.details.department}<br>`;
-                if (lab.details.campus) locationText += `Campus: ${lab.details.campus}`;
-                document.getElementById('lab-detail-location').innerHTML = locationText || 'Informações não disponíveis';
-
-                // Contato
-                let contactText = '';
-                if (lab.details.phone) contactText += `Telefone: ${lab.details.phone}<br>`;
-                if (lab.details.contact_email) contactText += `Email: ${lab.details.contact_email}`;
-                document.getElementById('lab-detail-contact').innerHTML = contactText || 'Informações não disponíveis';
-
-                // Horário
-                document.getElementById('lab-detail-hours').textContent = lab.details.working_hours || 'Não informado';
-
-                // Links
-                const websiteLink = document.getElementById('lab-detail-website');
-                if (lab.details.website) {
-                    websiteLink.href = lab.details.website;
-                    websiteLink.classList.remove('hidden');
-                } else {
-                    websiteLink.classList.add('hidden');
-                }
-
-                // Link para direções
-                const directionsLink = document.getElementById('lab-detail-directions');
-                if (lab.coordinates) {
-                    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lab.coordinates.lat},${lab.coordinates.lng}`;
-                    directionsLink.href = directionsUrl;
-                    directionsLink.classList.remove('hidden');
-                } else {
-                    directionsLink.classList.add('hidden');
-                }
-
-                // Link para perfil completo
-                document.getElementById('lab-detail-view').href = `/labs/${lab.id}`;
-
-                // Mostrar o container
-                detailContainer.classList.remove('hidden');
-
-                console.log('Detalhes do laboratório exibidos:', lab.name);
-            } catch (error) {
-                console.error('Erro ao mostrar detalhes do laboratório:', error);
             }
         }
 

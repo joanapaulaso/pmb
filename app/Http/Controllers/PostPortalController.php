@@ -98,8 +98,11 @@ class PostPortalController extends Controller
 
         $posts = $query->paginate(10);
         $tags = array_keys($tagColors);
+        $memberLabs = auth()->check()
+            ? auth()->user()->allTeams()->map(fn($team) => ['id' => $team->id, 'name' => $team->name])->values()
+            : collect();
 
-        return view('portal', compact('posts', 'tags', 'selectedTags', 'tagColors'));
+        return view('portal', compact('posts', 'tags', 'selectedTags', 'tagColors', 'memberLabs'));
     }
 
     /**
@@ -120,7 +123,9 @@ class PostPortalController extends Controller
                 'content' => 'required|max:10000', // Increased max size to handle HTML with images
                 'tag' => 'required|in:geral,pergunta,oportunidade,divulgação,ideia,colaboração,notícia,publicação',
                 'additional_tags' => 'sometimes|array|max:2',
-                'additional_tags.*' => 'in:geral,pergunta,oportunidade,divulgação,ideia,colaboração,notícia,publicaçãor'
+                'additional_tags.*' => 'in:geral,pergunta,oportunidade,divulgação,ideia,colaboração,notícia,publicação',
+                'is_lab_publication' => 'nullable|boolean',
+                'lab_id' => 'nullable|exists:teams,id',
             ]);
 
             // Log validation success
@@ -136,15 +141,41 @@ class PostPortalController extends Controller
             ]);
 
             $metadata = [];
+            $labId = $request->input('lab_id');
+            $memberLabIds = $request->user()->allTeams()->pluck('id');
+            $hasPublicationTag = in_array('publicação', array_merge([$validated['tag']], $request->input('additional_tags', [])));
+
+            if ($hasPublicationTag && is_null($request->input('is_lab_publication'))) {
+                return redirect()->route('portal')
+                    ->withErrors(['is_lab_publication' => 'Informe se a publicação pertence a um laboratório.'])
+                    ->withInput();
+            }
+
+            if ($request->boolean('is_lab_publication')) {
+                if (!$labId) {
+                    return redirect()->route('portal')
+                        ->withErrors(['lab_id' => 'Selecione o laboratório ao marcar a publicação como do laboratório.'])
+                        ->withInput();
+                }
+                if (!$memberLabIds->contains((int) $labId)) {
+                    return redirect()->route('portal')
+                        ->withErrors(['lab_id' => 'Você só pode associar publicações a laboratórios dos quais faz parte.'])
+                        ->withInput();
+                }
+            } else {
+                $labId = null;
+            }
 
             try {
+                $detectedUrl = null;
+                $detectedUrl = null;
                 // Extract URLs from HTML content, excluding localhost and image URLs
                 $shouldExtractLink = false;
                 $url = null;
 
                 // Primeiro verifique se há URLs de texto no conteúdo que não são imagens
                 if (preg_match('/\bhttps?:\/\/(?!localhost)[^"\'<>]+(?!\.(?:jpg|jpeg|png|gif|webp))/i', $content, $match)) {
-                    $url = $match[0]; // URL encontrada no texto que não é imagem
+                    $url = $this->normalizeUrl($match[0]); // URL encontrada no texto que não é imagem
                     $shouldExtractLink = true;
                 }
                 // Depois verifique links href (excluindo imagens)
@@ -158,16 +189,18 @@ class PostPortalController extends Controller
                         strpos($possibleUrl, '.png') === false &&
                         strpos($possibleUrl, '.gif') === false
                     ) {
-                        $url = $possibleUrl;
+                        $url = $this->normalizeUrl($possibleUrl);
                         $shouldExtractLink = true;
                     }
                 }
 
                 // Apenas extrair metadados se for uma URL válida que não seja imagem
                 if ($shouldExtractLink && $url) {
+                    $detectedUrl = $url;
                     // Use try-catch specific to the link preview service
                     try {
                         $metadata = $this->linkPreviewService->getPreview($url);
+                        $metadata['url'] = $this->normalizeUrl($metadata['url'] ?? $url);
                         \Log::info('Preview obtained successfully', ['url' => $url]);
                     } catch (\Exception $e) {
                         \Log::error('Error getting link preview', [
@@ -177,7 +210,7 @@ class PostPortalController extends Controller
 
                         // Use a default preview in case of error
                         $metadata = [
-                            'url' => $url,
+                            'url' => $this->normalizeUrl($url),
                             'title' => parse_url($url, PHP_URL_HOST) ?: 'Link',
                             'description' => 'Could not load information for this link'
                         ];
@@ -192,9 +225,24 @@ class PostPortalController extends Controller
             }
 
             try {
+                // Vincular informação de laboratório ao metadata quando aplicável
+                if (!is_array($metadata)) {
+                    $metadata = [];
+                }
+                if ($request->boolean('is_lab_publication') && $labId) {
+                    $team = $request->user()->allTeams()->firstWhere('id', (int) $labId);
+                    if ($team) {
+                        $metadata['lab_publication'] = true;
+                        $metadata['lab'] = [
+                            'id' => $team->id,
+                            'name' => $team->name,
+                        ];
+                    }
+                }
+
                 // Create the post with additional tags
                 $post = $request->user()->portalPosts()->create([
-                    'content' => $content,
+                    'content' => $this->applyLinkTitle($content, $metadata, $detectedUrl),
                     'tag' => $validated['tag'],
                     'additional_tags' => $request->input('additional_tags', []),
                     'metadata' => $metadata
@@ -365,7 +413,85 @@ class PostPortalController extends Controller
             $html = preg_replace($pattern, $replacement, $html);
         }
 
+        // Auto-link plain URLs that are not already inside anchors
+        $html = preg_replace_callback(
+            '/(?<!href=")(https?:\/\/[^\s<>"\']+)/i',
+            function ($matches) {
+                $url = e($this->normalizeUrl($matches[1]));
+                return '<a href="' . $url . '" target="_blank" rel="noopener noreferrer">' . $url . '</a>';
+            },
+            $html
+        );
+
+        // Ensure existing anchors open in new tab and are safe
+        $html = preg_replace_callback(
+            '/<a\s+([^>]*href=["\'](?:https?:\/\/)[^"\']+["\'][^>]*)>/i',
+            function ($matches) {
+                $attrs = $matches[1];
+                if (!preg_match('/\btarget=/', $attrs)) {
+                    $attrs .= ' target="_blank"';
+                }
+                if (!preg_match('/\brel=/', $attrs)) {
+                    $attrs .= ' rel="noopener noreferrer"';
+                }
+                return '<a ' . $attrs . '>';
+            },
+            $html
+        );
+
         return $html;
+    }
+
+    /**
+     * Se houver metadata com título, substitui a URL bruta ou texto do link pelo título, mantendo o href.
+     */
+    protected function applyLinkTitle(string $content, array $metadata, ?string $detectedUrl = null): string
+    {
+        $url = $this->normalizeUrl($metadata['url'] ?? $detectedUrl);
+        $title = $metadata['title'] ?? null;
+
+        if (empty($url)) {
+            return $content;
+        }
+
+        $href = e($url);
+        $titleText = e($title ?: (parse_url($url, PHP_URL_HOST) ?: $url));
+
+        // Atualizar anchors existentes que apontam para a URL somente se o texto for a própria URL/host
+        $content = preg_replace_callback(
+            '#<a\b([^>]*href=["\']'.preg_quote($url, '#').'["\'][^>]*)>(.*?)</a>#i',
+            function ($m) use ($titleText, $url) {
+                $text = trim(strip_tags($m[2]));
+                $host = parse_url($url, PHP_URL_HOST);
+                if ($text === $url || $text === $host) {
+                    return '<a '.$m[1].'>'.$titleText.'</a>';
+                }
+                return $m[0]; // preserva texto customizado
+            },
+            $content
+        );
+
+        // Converter URLs em texto puro (fora de anchors) em anchors com título
+        $content = preg_replace(
+            '/(^|[\s>])(https?:\/\/[^\s<>"\']+)/i',
+            '$1<a href="$2" target="_blank" rel="noopener noreferrer">'.$titleText.'</a>',
+            $content
+        );
+
+        return $content;
+    }
+
+    /**
+     * Remove entidades/aspas extras de URLs.
+     */
+    protected function normalizeUrl(?string $url): ?string
+    {
+        if (!$url) {
+            return null;
+        }
+        $clean = html_entity_decode($url, ENT_QUOTES, 'UTF-8');
+        $clean = trim($clean, '"');
+        return $clean;
     }
 
     /**

@@ -111,27 +111,13 @@ class User extends Authenticatable
         return $this->hasMany(UserCategory::class);
     }
 
-    /**
-     * The teams that belong to the user.
-     */
-    public function teams()
+    public function messagesSent()
     {
-        return $this->belongsToMany(Team::class, 'team_user');
+        return $this->hasMany(Message::class, 'sender_id');
     }
 
-    /**
-     * The teams that the user owns.
-     */
-    public function ownedTeams()
+    public function messagesReceived()
     {
-        return $this->hasMany(Team::class, 'user_id');
-    }
-
-    /**
-     * Get all teams the user belongs to or owns
-     */
-    public function allTeams()
-    {
-        return $this->ownedTeams->merge($this->teams);
+        return $this->hasMany(Message::class, 'recipient_id');
     }
 }

@@ -14,17 +14,6 @@
 @endphp
 
 <div>
-    <div class="flex flex-wrap gap-2 mb-4">
-        @foreach($tags as $tag)
-            <button type="button"
-                    class="tag-button inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold
-                    {{ in_array($tag, $selectedTags) ? 'bg-gray-800 text-white' : $tagColors[$tag] }}"
-                    data-tag="{{ $tag }}"
-                    data-original-styles="{{ $tagColors[$tag] }}">
-                #{{ $tag }}
-            </button>
-        @endforeach
-    </div>
     <input type="hidden" id="selected-tags" value="{{ implode(',', $selectedTags) }}">
 
     <div id="posts-container">
@@ -62,20 +51,6 @@
 
                 <!-- Render HTML content from Quill -->
                 <div class="post-content prose max-w-none">{!! $post->content !!}</div>
-
-                @if (!empty($post->metadata))
-                    <div class="mt-4 border rounded flex overflow-hidden">
-                        <a href="{{ $post->metadata['url'] }}" target="_blank" class="flex w-full">
-                            @if (!empty($post->metadata['image']))
-                                <img src="{{ $post->metadata['image'] }}" alt="{{ $post->metadata['title'] }}" class="w-24 h-auto object-cover">
-                            @endif
-                            <div class="p-4 flex-grow">
-                                <h3 class="font-semibold text-lg">{{ $post->metadata['title'] }}</h3>
-                                <p>{{ $post->metadata['description'] }}</p>
-                            </div>
-                        </a>
-                    </div>
-                @endif
 
                 <p class="text-sm text-gray-500">{{ $post->created_at->diffForHumans() }}</p>
 
@@ -165,99 +140,61 @@ window.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribut
 window.tagColors = @json($tagColors);
 
 // Definindo toggleTag no escopo global (window)
+const DASH_SELECTED_CLASSES = ['bg-gray-300', 'text-gray-900', 'border', 'border-gray-400'];
+
+function applyTagStylesDash(selectedTags) {
+    document.querySelectorAll('.tag-button').forEach(btn => {
+        const tag = btn.getAttribute('data-tag');
+        const originalStyles = btn.getAttribute('data-original-styles') || '';
+        // Reset to original
+        btn.className = btn.className
+            .split(' ')
+            .filter(c => !DASH_SELECTED_CLASSES.includes(c))
+            .join(' ');
+        originalStyles.split(' ').forEach(cls => {
+            if (cls) btn.classList.add(cls);
+        });
+        // Apply selected
+        if (selectedTags.includes(tag)) {
+            DASH_SELECTED_CLASSES.forEach(cls => btn.classList.add(cls));
+        }
+    });
+}
+
 window.toggleTag = function(element, tag) {
     const selectedTagsInput = document.getElementById('selected-tags');
-    let selectedTags = selectedTagsInput.value ? selectedTagsInput.value.split(',') : [];
+    if (!selectedTagsInput) {
+        console.warn('selected-tags hidden input not found');
+        return;
+    }
+    let selectedTags = selectedTagsInput.value ? selectedTagsInput.value.split(',').filter(Boolean) : [];
 
     if (tag === 'all') {
         if (selectedTags.includes('all')) {
             selectedTags = [];
-            document.querySelectorAll('.tag-button').forEach(btn => {
-                btn.classList.remove('bg-gray-800', 'text-white');
-                const originalStyles = btn.getAttribute('data-original-styles');
-                // Adiciona cada classe do data-original-styles separadamente
-                if (originalStyles) {
-                    originalStyles.split(' ').forEach(cls => {
-                        if (cls) btn.classList.add(cls);
-                    });
-                }
-            });
         } else {
             selectedTags = ['all'];
-            document.querySelectorAll('.tag-button').forEach(btn => {
-                const btnTag = btn.getAttribute('data-tag');
-                // Remover todas as classes de cores originais
-                const originalStyles = btn.getAttribute('data-original-styles');
-                if (originalStyles) {
-                    originalStyles.split(' ').forEach(cls => {
-                        if (cls) btn.classList.remove(cls);
-                    });
-                }
-
-                // Adicionar classes apropriadas
-                if (btnTag === 'all') {
-                    btn.classList.add('bg-gray-800', 'text-white');
-                } else {
-                    // Replicar as classes originais
-                    const originalStyles = btn.getAttribute('data-original-styles');
-                    if (originalStyles) {
-                        originalStyles.split(' ').forEach(cls => {
-                            if (cls) btn.classList.add(cls);
-                        });
-                    }
-                }
-            });
         }
     } else {
         if (selectedTags.includes('all')) {
             selectedTags = selectedTags.filter(t => t !== 'all');
-            const allBtn = document.querySelector('.tag-button[data-tag="all"]');
-            if (allBtn) {
-                allBtn.classList.remove('bg-gray-800', 'text-white');
-                const originalStyles = allBtn.getAttribute('data-original-styles');
-                if (originalStyles) {
-                    originalStyles.split(' ').forEach(cls => {
-                        if (cls) allBtn.classList.add(cls);
-                    });
-                }
-            }
         }
 
         if (selectedTags.includes(tag)) {
             selectedTags = selectedTags.filter(t => t !== tag);
-
-            // Remover classes de seleção
-            element.classList.remove('bg-gray-800', 'text-white');
-
-            // Adicionar classes originais
-            const originalStyles = element.getAttribute('data-original-styles');
-            if (originalStyles) {
-                originalStyles.split(' ').forEach(cls => {
-                    if (cls) element.classList.add(cls);
-                });
-            }
         } else if (selectedTags.length < 3) {
             selectedTags.push(tag);
-
-            // Remover as classes originais uma por uma
-            const originalStyles = element.getAttribute('data-original-styles');
-            if (originalStyles) {
-                originalStyles.split(' ').forEach(cls => {
-                    if (cls) element.classList.remove(cls);
-                });
-            }
-
-            // Adicionar classes de seleção
-            element.classList.add('bg-gray-800', 'text-white');
         }
     }
 
     selectedTagsInput.value = selectedTags.join(',');
+    applyTagStylesDash(selectedTags);
+    console.log('Filtro de tags atualizado:', selectedTags);
     fetchPosts(selectedTags);
 };
 
 function fetchPosts(tags) {
-    fetch('{{ route('dashboard') }}', {
+    fetch('{{ route('dashboard.filter') }}', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': window.csrfToken,
@@ -267,8 +204,18 @@ function fetchPosts(tags) {
         },
         body: JSON.stringify({ tags: tags })
     })
-    .then(response => response.json())
-    .then(data => updatePosts(data.posts))
+    .then(response => {
+        if (!response.ok) {
+            console.error('Erro na resposta do filtro:', response.status, response.statusText);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Posts filtrados recebidos:', data);
+        if (data && data.posts) {
+            updatePosts(data.posts);
+        }
+    })
     .catch(error => console.error('Error fetching posts:', error));
 }
 
@@ -685,3 +632,14 @@ window.initQuillWithImageUpload = initQuillWithImageUpload;
 
 
 </script>
+
+<style>
+    .post-content a {
+        color: #2563eb;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .post-content a:hover {
+        text-decoration: underline;
+    }
+</style>
