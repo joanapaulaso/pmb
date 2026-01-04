@@ -13,6 +13,21 @@
                 @foreach($equipments as $index => $equipment)
                     <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200" wire:key="equipment-{{ $index }}">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Título -->
+                            <div>
+                                <x-label for="equipments.{{ $index }}.title" value="{{ __('Título') }}" />
+                                <x-input
+                                    id="equipments.{{ $index }}.title"
+                                    type="text"
+                                    class="mt-1 block w-full"
+                                    wire:model.defer="equipments.{{ $index }}.title"
+                                    placeholder="Ex.: Espectrômetro de Massas"
+                                />
+                                @error("equipments.{$index}.title")
+                                    <x-input-error for="equipments.{$index}.title" class="mt-2" />
+                                @enderror
+                            </div>
+
                             <!-- Modelo -->
                             <div>
                                 <x-label for="equipments.{{ $index }}.model" value="{{ __('Modelo') }}" />

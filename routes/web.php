@@ -8,6 +8,7 @@ use App\Http\Controllers\PostPortalController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\LabsMapController;
+use App\Http\Controllers\EquipmentMapController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LabCoordinatorController;
 use App\Http\Controllers\PortalController;
@@ -106,6 +107,9 @@ Route::middleware($authMiddleware)->group(function () {
     // Rota de API para dados dos laboratórios
     Route::get('/api/labs', [LabsMapController::class, 'getLabsData'])->name('api.labs');
     Route::get('/labs/{team}', [LabsMapController::class, 'show'])->name('labs.show');
+
+    // Mapa de Equipamentos (catálogo)
+    Route::get('/equipments/map', [EquipmentMapController::class, 'index'])->name('equipments.map');
 
     Route::post('/upload-image', [App\Http\Controllers\ImageUploadController::class, 'upload'])
         ->middleware(['auth'])

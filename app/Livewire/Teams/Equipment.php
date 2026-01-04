@@ -17,6 +17,7 @@ class Equipment extends Component
     public $equipments = [];
 
     protected $rules = [
+        'equipments.*.title' => 'required|string|max:255',
         'equipments.*.model' => 'required|string|max:255',
         'equipments.*.brand' => 'required|string|max:255',
         'equipments.*.technical_responsible' => 'required|string|max:255',
@@ -33,11 +34,12 @@ class Equipment extends Component
             foreach ($this->team->equipments as $equipment) {
                 $this->equipments[] = [
                     'id' => $equipment->id,
+                    'title' => $equipment->title ?? '',
                     'model' => $equipment->model,
                     'brand' => $equipment->brand,
                     'technical_responsible' => $equipment->technical_responsible,
-                    'available_for_services' => $equipment->available_for_services,
-                    'available_for_collaboration' => $equipment->available_for_collaboration,
+                    'available_for_services' => (bool) $equipment->available_for_services,
+                    'available_for_collaboration' => (bool) $equipment->available_for_collaboration,
                     'photo_path' => $equipment->photo_path,
                     'photo' => null,
                 ];
@@ -53,6 +55,7 @@ class Equipment extends Component
     {
         $this->equipments[] = [
             'id' => null,
+            'title' => '',
             'model' => '',
             'brand' => '',
             'technical_responsible' => '',
@@ -95,11 +98,12 @@ class Equipment extends Component
             ]);
 
             $data = [
+                'title' => $equipmentData['title'],
                 'model' => $equipmentData['model'],
                 'brand' => $equipmentData['brand'],
                 'technical_responsible' => $equipmentData['technical_responsible'],
-                'available_for_services' => $equipmentData['available_for_services'],
-                'available_for_collaboration' => $equipmentData['available_for_collaboration'],
+                'available_for_services' => (bool) $equipmentData['available_for_services'],
+                'available_for_collaboration' => (bool) $equipmentData['available_for_collaboration'],
             ];
 
             if ($equipmentData['photo']) {

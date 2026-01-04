@@ -171,6 +171,7 @@ class LabsMapController extends Controller
             'equipments' => $lab->equipments->map(function ($equipment) {
                 return [
                     'id' => $equipment->id,
+                    'title' => $equipment->title,
                     'model' => $equipment->model,
                     'brand' => $equipment->brand,
                     'technical_responsible' => $equipment->technical_responsible,

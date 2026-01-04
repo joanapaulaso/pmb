@@ -10,6 +10,7 @@ class Equipment extends Model
 
     protected $fillable = [
             'team_id',
+            'title',
             'model',
             'brand',
             'technical_responsible',
@@ -17,6 +18,11 @@ class Equipment extends Model
             'available_for_collaboration',
             'photo_path',
         ];
+
+    protected $casts = [
+        'available_for_services' => 'boolean',
+        'available_for_collaboration' => 'boolean',
+    ];
 
     public function team()
     {

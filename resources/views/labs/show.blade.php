@@ -64,13 +64,14 @@
                                                         <div class="mb-3">
                                                             <img
                                                                 src="{{ $equipment['photo_path'] }}"
-                                                                alt="{{ $equipment['model'] }}"
+                                                                alt="{{ $equipment['title'] ?? $equipment['model'] }}"
                                                                 class="w-full h-32 object-cover rounded cursor-pointer"
-                                                                onclick="openModal('{{ $equipment['photo_path'] }}', '{{ $equipment['model'] }}')"
+                                                                onclick="openModal('{{ $equipment['photo_path'] }}', '{{ $equipment['title'] ?? $equipment['model'] }}')"
                                                             >
                                                         </div>
                                                     @endif
-                                                    <h4 class="text-sm font-semibold truncate">{{ $equipment['model'] }}</h4>
+                                                    <h4 class="text-sm font-semibold truncate">{{ $equipment['title'] ?? $equipment['model'] }}</h4>
+                                                    <p class="text-xs text-gray-600 truncate">Modelo: {{ $equipment['model'] }}</p>
                                                     <p class="text-xs text-gray-600 truncate">Marca: {{ $equipment['brand'] }}</p>
                                                     <p class="text-xs text-gray-600 truncate">Responsável: {{ $equipment['technical_responsible'] }}</p>
                                                     <div class="mt-1">

@@ -40,6 +40,9 @@
                             <x-dropdown-link href="{{ route('labs.map') }}" :active="request()->routeIs('labs.map')" class="text-gray-700 hover:bg-gray-100 transition-colors">
                                 {{ __('Mapa de Laboratórios') }}
                             </x-dropdown-link>
+                            <x-dropdown-link href="{{ route('equipments.map') }}" :active="request()->routeIs('equipments.map')" class="text-gray-700 hover:bg-gray-100 transition-colors">
+                                {{ __('Mapa de Equipamentos') }}
+                            </x-dropdown-link>
                             <x-dropdown-link href="{{ route('membros') }}" :active="request()->routeIs('membros')" class="text-gray-700 hover:bg-gray-100 transition-colors">
                                 {{ __('Membros') }}
                             </x-dropdown-link>
@@ -205,6 +208,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('labs.map') }}" :active="request()->routeIs('labs.map')" class="text-gray-700 hover:bg-gray-100 transition-colors">
                 {{ __('Mapa de Laboratórios') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link href="{{ route('equipments.map') }}" :active="request()->routeIs('equipments.map')" class="text-gray-700 hover:bg-gray-100 transition-colors">
+                {{ __('Mapa de Equipamentos') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('membros') }}" :active="request()->routeIs('membros')" class="text-gray-700 hover:bg-gray-100 transition-colors">
                 {{ __('Membros') }}

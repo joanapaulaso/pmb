@@ -20,4 +20,5 @@ deploy.sh
 /gpt
 .prettierrc
 composer-setup.php
+/.docker-config
 /.ssh
