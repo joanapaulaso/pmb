@@ -14,7 +14,7 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="flex flex-col md:flex-row md:space-x-6">
                 <!-- Coluna esquerda (menu + tags) -->
-                <aside class="md:w-1/4 mb-6 md:mb-0 space-y-4 md:sticky md:top-20 self-start">
+                <aside class="md:w-1/4 mb-6 md:mb-0 space-y-4 md:sticky md:top-5 self-start">
                     <div class="bg-white shadow-sm rounded-lg border border-gray-100 p-4">
                         <h3 class="text-lg font-semibold text-gray-800 mb-3">Publicar</h3>
                         <p class="text-sm text-gray-600 mb-3">Compartilhe conteúdo do portal.</p>
@@ -58,7 +58,7 @@
                 <main class="md:w-2/4 space-y-6">
                     <div id="composer-portal" class="bg-white shadow-sm rounded-lg border border-gray-100 p-4 {{ $portalShouldOpenComposer ? '' : 'hidden' }}">
                         @if(auth()->user()->isAdmin())
-                            <x-post-portal-form :tags="$tags" :selectedTags="$selectedTags" :hideTags="false" :memberLabs="$memberLabs" />
+                            <x-post-portal-form :tags="$tags" :selectedTags="$selectedTags" :hideTags="false" />
                         @else
                             <div class="text-sm text-gray-600">Apenas administradores podem criar posts no portal.</div>
                         @endif
